@@ -1,0 +1,59 @@
+# Core dependencies
+python-dotenv>=1.0.0
+near-api-py>=0.1.0
+aiohttp>=3.8.0
+numpy>=1.21.0
+pytest>=7.0.0
+pytest-asyncio>=0.18.0
+pytest-cov>=3.0.0
+black>=22.0.0
+isort>=5.10.0
+flake8>=4.0.0
+mypy>=0.950
+mkdocs>=1.3.0
+
+# LLM Integration
+openai>=1.0.0
+hyperbolic>=0.1.0
+anthropic>=0.5.0
+langchain>=0.0.200
+transformers>=4.30.0
+torch>=2.0.0
+
+# Market Data
+requests>=2.31.0
+websockets>=11.0.0
+ccxt>=4.0.0
+
+# Data Processing
+pandas>=2.0.0
+redis>=4.5.0
+
+# Storage and Caching
+redis>=4.5.0
+aioredis>=2.0.0
+
+# Monitoring and Logging
+structlog>=23.1.0
+prometheus-client>=0.17.0
+
+# CLI Tools
+click>=8.0.0
+rich>=13.0.0
+typer>=0.9.0
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.10.0
+
+# Code Quality
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.0.0
+mypy>=1.4.0
+
+# Documentation
+mkdocs>=1.4.0
+mkdocs-material>=9.1.0 

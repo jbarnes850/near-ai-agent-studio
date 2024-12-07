@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""
+NEAR Swarm Intelligence CLI
+Command-line tool for managing NEAR swarm strategies.
+"""
+
+import os
+import sys
+import click
+import asyncio
+import logging
+from typing import Dict, Any
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+@click.group()
+def cli():
+    """NEAR Swarm Intelligence CLI - Manage your swarm strategies."""
+    pass
+
+@cli.command()
+@click.argument('strategy_type', type=click.Choice(['arbitrage', 'market-making']))
+@click.option('--name', prompt='Strategy name', help='Name for your strategy')
+def init(strategy_type: str, name: str):
+    """Initialize a new strategy from template."""
+    try:
+        # Create strategy directory
+        os.makedirs(name, exist_ok=True)
+        
+        # Copy template files
+        template_dir = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'examples',
+            f'{strategy_type}.py'
+        )
+        
+        with open(template_dir, 'r') as f:
+            template = f.read()
+        
+        # Create strategy file
+        strategy_file = os.path.join(name, 'strategy.py')
+        with open(strategy_file, 'w') as f:
+            f.write(template)
+        
+        # Create config file
+        config = {
+            'strategy_type': strategy_type,
+            'name': name,
+            'created_at': datetime.now().isoformat(),
+            'parameters': {
+                'token_pairs': ['NEAR/USDC'],
+                'exchanges': ['ref-finance', 'jumbo'],
+                'min_profit': 0.002,
+                'max_position': 10000
+            }
+        }
+        
+        config_file = os.path.join(name, 'config.json')
+        with open(config_file, 'w') as f:
+            import json
+            json.dump(config, f, indent=2)
+        
+        # Create .env template
+        env_template = """
+# NEAR Protocol Configuration
+NEAR_NETWORK=testnet
+NEAR_ACCOUNT_ID=your-account.testnet
+NEAR_PRIVATE_KEY=your-private-key
+
+# Strategy Configuration
+MIN_PROFIT=0.002
+MAX_POSITION=10000
+GAS_THRESHOLD=0.001
+"""
+        
+        env_file = os.path.join(name, '.env')
+        with open(env_file, 'w') as f:
+            f.write(env_template.strip())
+        
+        click.echo(f"✅ Strategy '{name}' initialized successfully!")
+        click.echo("\nNext steps:")
+        click.echo(f"1. cd {name}")
+        click.echo("2. Edit .env with your credentials")
+        click.echo("3. Run 'near-swarm run' to start the strategy")
+        
+    except Exception as e:
+        logger.error(f"Error initializing strategy: {str(e)}")
+        sys.exit(1)
+
+@cli.command()
+@click.option('--strategy', default='.', help='Path to strategy directory')
+def run(strategy: str):
+    """Run a strategy."""
+    try:
+        # Add strategy directory to path
+        sys.path.append(os.path.abspath(strategy))
+        
+        # Load config
+        import json
+        with open(os.path.join(strategy, 'config.json'), 'r') as f:
+            config = json.load(f)
+        
+        # Import strategy
+        from strategy import main
+        
+        click.echo(f"🚀 Starting strategy: {config['name']}")
+        
+        # Run strategy
+        asyncio.run(main())
+        
+    except Exception as e:
+        logger.error(f"Error running strategy: {str(e)}")
+        sys.exit(1)
+
+@cli.command()
+@click.option('--strategy', default='.', help='Path to strategy directory')
+def test(strategy: str):
+    """Run strategy tests."""
+    try:
+        import pytest
+        
+        # Run tests
+        result = pytest.main([
+            os.path.join(strategy, 'tests'),
+            '-v'
+        ])
+        
+        if result != 0:
+            click.echo("❌ Tests failed")
+            sys.exit(1)
+        
+        click.echo("✅ All tests passed!")
+        
+    except Exception as e:
+        logger.error(f"Error running tests: {str(e)}")
+        sys.exit(1)
+
+@cli.command()
+@click.option('--strategy', default='.', help='Path to strategy directory')
+def monitor(strategy: str):
+    """Monitor strategy performance."""
+    try:
+        # Load config
+        import json
+        with open(os.path.join(strategy, 'config.json'), 'r') as f:
+            config = json.load(f)
+        
+        click.echo(f"📊 Monitoring strategy: {config['name']}")
+        
+        # TODO: Implement monitoring dashboard
+        click.echo("Monitoring dashboard not yet implemented")
+        
+    except Exception as e:
+        logger.error(f"Error monitoring strategy: {str(e)}")
+        sys.exit(1)
+
+@cli.command()
+def list():
+    """List available strategies."""
+    try:
+        strategies = []
+        
+        # Find all strategy directories
+        for item in os.listdir('.'):
+            config_file = os.path.join(item, 'config.json')
+            if os.path.isdir(item) and os.path.exists(config_file):
+                with open(config_file, 'r') as f:
+                    config = json.load(f)
+                    strategies.append(config)
+        
+        if not strategies:
+            click.echo("No strategies found")
+            return
+        
+        # Display strategies
+        click.echo("\nAvailable Strategies:")
+        for strategy in strategies:
+            click.echo(f"\n{strategy['name']} ({strategy['strategy_type']})")
+            click.echo(f"Created: {strategy['created_at']}")
+            click.echo("Parameters:")
+            for k, v in strategy['parameters'].items():
+                click.echo(f"  {k}: {v}")
+        
+    except Exception as e:
+        logger.error(f"Error listing strategies: {str(e)}")
+        sys.exit(1)
+
+if __name__ == '__main__':
+    cli() 
