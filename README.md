@@ -1,15 +1,19 @@
-<div align="center">
-
 # NEAR Swarm Intelligence Framework
 
-A production-ready starter kit for building AI-powered trading strategies on NEAR using multi-agent swarm intelligence.
+A production-ready starter kit for building AI-powered agents and multi-agent swarm intelligence on NEAR. This template provides the essential building blocks for creating autonomous agents that can interact with the NEAR blockchain, make decisions using LLMs, and collaborate in swarms.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![NEAR](https://img.shields.io/badge/NEAR-Protocol-blue.svg)](https://near.org)
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](https://github.com/near/near-ai-agent-template/actions)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Hyperbolic](https://img.shields.io/badge/LLM-Hyperbolic-purple.svg)](https://hyperbolic.ai)
 
 ## 🧠 What is Swarm Intelligence?
 
 Swarm intelligence is a collaborative decision-making approach where multiple specialized agents work together to achieve better outcomes than any single agent could alone. In this framework:
 
 - **Market Analyzer** agents evaluate price data and trading volumes
-- **Risk Manager** agents assess potential risks and exposure
+- **Risk Manager** agents assess potential risks and exposure 
 - **Strategy Optimizer** agents fine-tune execution parameters
 
 These agents collaborate through a consensus mechanism, where each agent:
@@ -17,6 +21,8 @@ These agents collaborate through a consensus mechanism, where each agent:
 1. Evaluates proposals based on its expertise
 2. Provides a confidence score with its decision
 3. Explains its reasoning
+
+Each agent votes with a confidence score, and only opportunities meeting the minimum consensus thresholds (configurable via SwarmConfig) are executed. This distributed agent decision-making helps prevent individual agent biases and reduces risk through swarm intelligence.
 
 ## ⚡️ Quick Start
 
@@ -27,7 +33,6 @@ cd near-swarm-intelligence
 
 # Run the quickstart script
 ./scripts/quickstart.sh
-```
 
 The quickstart script will:
 
@@ -37,11 +42,13 @@ The quickstart script will:
 - Configure your environment
 - Create an example strategy
 - Guide you through using the CLI
+```
 
 > **Note**: This template runs on NEAR testnet by default for safe development.
 > Always test thoroughly before deploying to mainnet.
 
-# Run example strategy
+## Run example strategy
+
 ```bash
 python examples/swarm_trading.py
 ```
@@ -61,132 +68,92 @@ python examples/swarm_trading.py
 - **Transaction Safety**: Built-in validation and error handling
 - **Market Access**: Ready-to-use interfaces for DEX interactions
 
-### Starter Kit Features
+## Project Structure
 
-- **Simple Interface**: Clear APIs for agent creation and interaction
-- **Working Examples**: Production-ready trading strategy templates
-- **Comprehensive Tests**: Reliable test suite for core components
-- **Clear Documentation**: Step-by-step guides and best practices
+```bash
+near-swarm-intelligence/
+├── near_swarm/              # Core package
+│   ├── core/               # Core components
+│   │   ├── agent.py       # Base agent implementation
+│   │   ├── swarm_agent.py # Swarm intelligence
+│   │   └── ...
+│   └── examples/          # Example implementations
+├── scripts/               # Utility scripts
+├── tests/                # Test suite
+└── docs/                 # Documentation
+```
 
-## 🚀 Basic Usage
+## Example: Creating Your First Agent
 
 ```python
-from near_swarm.core.agent import AgentConfig
+from near_swarm.core.agent import NEARAgent, AgentConfig
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 
-# Create specialized agents
-market_analyzer = SwarmAgent(
-    config=AgentConfig(...),
-    swarm_config=SwarmConfig(
-        role="market_analyzer",
-        min_confidence=0.6  # Lower threshold for market signals
-    )
+# Configure your agent
+config = AgentConfig(
+    near_network="testnet",
+    account_id="your-account.testnet",
+    private_key="your-private-key",
+    llm_provider="hyperbolic",
+    llm_api_key="your-api-key"
 )
 
-risk_manager = SwarmAgent(
-    config=AgentConfig(...),
-    swarm_config=SwarmConfig(
-        role="risk_manager",
-        min_confidence=0.8  # Higher threshold for risk assessment
-    )
-)
+# Create and start agent
+agent = NEARAgent(config)
+await agent.start()
 
-# Form the swarm
-swarm = [market_analyzer, risk_manager]
-for agent in swarm:
-    await agent.join_swarm([a for a in swarm if a != agent])
-
-# Propose a trade
-result = await market_analyzer.propose_action(
-    action_type="trade",
-    params={
-        "token": "NEAR",
-        "action": "buy",
-        "amount": 10.0
+# Execute actions
+result = await agent.execute_action({
+    "type": "transaction",
+    "params": {
+        "receiver_id": "receiver.testnet",
+        "amount": "1.5"
     }
+})
+```
+
+## Creating a Swarm
+
+```python
+# Create swarm configuration
+swarm_config = SwarmConfig(
+    role="market_analyzer",
+    min_confidence=0.7,
+    min_votes=2,
+    timeout=1.0
 )
 
-# Check consensus
-if result["consensus"]:
-    print(f"Trade approved with {result['approval_rate']:.0%} confidence")
-    for reason in result["reasons"]:
-        print(f"- {reason}")
+# Initialize swarm agents
+main_agent = SwarmAgent(config, swarm_config)
+peer_agent = SwarmAgent(config, SwarmConfig(role="risk_manager"))
+
+# Form swarm
+await main_agent.join_swarm([peer_agent])
 ```
 
-## 📦 Project Structure
+## Testing
+
+Run the test suite:
 
 ```bash
-near-swarm/
-├── near_swarm/          # Core Framework
-│   └── core/           
-│       ├── agent.py         # Base Agent
-│       ├── swarm_agent.py   # Swarm Implementation
-│       ├── consensus.py     # Voting System
-│       └── near_integration.py
-├── examples/            # Working Examples
-│   ├── swarm_trading.py    # Basic Trading Strategy
-│   └── market_making.py    # Market Making Strategy
-├── tests/              # Test Suite
-└── docs/               # Documentation
+pytest tests/ -v
 ```
 
-## 🛠 Configuration
+## Documentation
 
-Copy `.env.example` to `.env` and configure:
+- [Core Concepts](docs/core-concepts.md)
+- [First Strategy](docs/first-strategy.md)
+- [Tutorial](docs/tutorial.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
-```env
-# NEAR Configuration
-NEAR_NETWORK=testnet
-NEAR_ACCOUNT_ID=your-account.testnet
-NEAR_PRIVATE_KEY=your-private-key
+## Contributing
 
-# AI Provider (optional)
-HYPERBOLIC_API_KEY=your-api-key
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md).
 
-# Swarm Settings
-CONSENSUS_THRESHOLD=0.7  # Required agreement among agents
-MIN_VOTES=2             # Minimum votes needed
-```
+## License
 
-## 📚 CLI Commands
-
-The `near-swarm` CLI helps manage your strategies:
-
-```bash
-# Create new strategy
-./scripts/near-swarm init arbitrage --name my-strategy
-
-# List strategies
-./scripts/near-swarm list
-
-# Run strategy
-./scripts/near-swarm run
-
-# Monitor performance
-./scripts/near-swarm monitor
-```
-
-## 📚 Documentation
-
-- [Getting Started](docs/getting-started.md) - First steps and basic concepts
-- [First Strategy](docs/first-strategy.md) - Build your first swarm strategy
-- [Core Concepts](docs/core-concepts.md) - Deep dive into swarm intelligence
-- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
-
-## 🤝 Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## 📝 License
-
-MIT License - see [LICENSE](LICENSE) for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-<div align="center">
-
-Built with ❤️ by the NEAR Community
-
-[Join us on Discord](https://discord.gg/near) • [Follow us on Twitter](https://twitter.com/NEARProtocol)
-
-</div>
+Built with ❤️ by the NEAR community

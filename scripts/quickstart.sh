@@ -134,14 +134,54 @@ if [ ! -f .env ]; then
 fi
 
 echo ""
-echo "🔑 NEAR Wallet Setup (Testnet)"
+echo "🔑 NEAR Wallet Setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Check if NEAR account exists, if not create one
+# Function to validate wallet
+validate_wallet() {
+    echo "Validating wallet..."
+    show_progress "Testing wallet connection" 2
+    
+    # Run wallet validation test
+    if python -m pytest tests/core/test_near_integration.py -k test_wallet_validation -v > /dev/null 2>&1; then
+        echo "✅ Wallet validated successfully"
+        return 0
+    else
+        echo "❌ Wallet validation failed"
+        return 1
+    fi
+}
+
+# Check if NEAR account exists
 if [ ! -f ~/.near-credentials/testnet/*.json ]; then
     echo "Creating new NEAR testnet wallet..."
     show_progress "Setting up NEAR wallet" 3
     ./scripts/create_near_wallet.sh
+    
+    # Validate new wallet
+    echo "Waiting for wallet to be ready..."
+    show_progress "Waiting for network propagation" 5
+    
+    # Try to validate wallet
+    attempt=1
+    max_attempts=5
+    while [ $attempt -le $max_attempts ]; do
+        if validate_wallet; then
+            break
+        fi
+        
+        if [ $attempt -lt $max_attempts ]; then
+            echo "Retrying in $((attempt * 2)) seconds... (Attempt $attempt/$max_attempts)"
+            sleep $((attempt * 2))
+        fi
+        ((attempt++))
+    done
+    
+    if [ $attempt -gt $max_attempts ]; then
+        echo "❌ Failed to validate wallet after $max_attempts attempts"
+        echo "Please try running quickstart.sh again in a few minutes"
+        exit 1
+    fi
 else
     echo "✅ Existing NEAR testnet wallet found"
     # Update .env with existing credentials
@@ -154,6 +194,9 @@ else
         sed -i '' "s/NEAR_ACCOUNT_ID=.*/NEAR_ACCOUNT_ID=$ACCOUNT_ID/" .env
         sed -i '' "s/NEAR_PRIVATE_KEY=.*/NEAR_PRIVATE_KEY=$PRIVATE_KEY/" .env
         echo "✅ Credentials updated in environment file"
+        
+        # Validate existing wallet
+        validate_wallet
     fi
 fi
 

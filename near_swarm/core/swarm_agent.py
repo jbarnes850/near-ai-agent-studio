@@ -1,152 +1,146 @@
 """
-NEAR Swarm Agent Implementation
-Extends base NEARAgent with swarm intelligence capabilities
+Swarm Agent Module
+Implements swarm intelligence for NEAR agents
 """
 
-from typing import Dict, List, Optional
+import logging
 from dataclasses import dataclass
-import asyncio
+from typing import List, Dict, Any, Optional
 
-from .agent import NEARAgent, AgentConfig
-from .consensus import Vote, ConsensusManager
+from near_swarm.core.agent import NEARAgent, AgentConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class SwarmConfig:
-    """Configuration for swarm behavior"""
-    role: str  # Specialized role in the swarm
+    """Swarm agent configuration."""
+    role: str
     min_confidence: float = 0.7
-    min_votes: int = 3
-    timeout: float = 5.0
+    min_votes: int = 2
+    timeout: float = 1.0
+
+    def __post_init__(self):
+        """Validate configuration."""
+        if not self.role:
+            raise ValueError("role is required")
+        if self.min_confidence < 0 or self.min_confidence > 1:
+            raise ValueError("min_confidence must be between 0 and 1")
+        if self.min_votes < 1:
+            raise ValueError("min_votes must be at least 1")
+        if self.timeout <= 0:
+            raise ValueError("timeout must be positive")
 
 
 class SwarmAgent(NEARAgent):
-    """NEAR Protocol Swarm Agent implementation"""
-    
+    """NEAR agent with swarm intelligence capabilities."""
+
     def __init__(self, config: AgentConfig, swarm_config: SwarmConfig):
-        """Initialize the swarm agent"""
+        """Initialize swarm agent."""
         super().__init__(config)
         self.swarm_config = swarm_config
-        self.consensus_manager = ConsensusManager(
-            min_confidence=swarm_config.min_confidence,
-            min_votes=swarm_config.min_votes,
-            timeout=swarm_config.timeout
-        )
         self.swarm_peers: List[SwarmAgent] = []
-    
+        logger.info(f"Initialized swarm agent with role: {swarm_config.role}")
+
     async def join_swarm(self, peers: List['SwarmAgent']):
-        """Join a swarm of peer agents"""
+        """Join a swarm of agents."""
         self.swarm_peers = peers
-        await self._announce_presence()
-    
-    async def _announce_presence(self):
-        """Announce presence to swarm peers"""
-        for peer in self.swarm_peers:
-            try:
-                await peer.handle_peer_announcement(self)
-            except Exception as e:
-                self.logger.error(f"Failed to announce to peer: {e}")
-    
-    async def handle_peer_announcement(self, peer: 'SwarmAgent'):
-        """Handle announcement from a new peer"""
-        if peer not in self.swarm_peers:
-            self.swarm_peers.append(peer)
-    
-    async def propose_action(self, action_type: str, params: Dict) -> Dict:
-        """Propose an action to the swarm"""
+        for peer in peers:
+            if self not in peer.swarm_peers:
+                peer.swarm_peers.append(self)
+        logger.info(f"Joined swarm with {len(peers)} peers")
+
+    async def propose_action(self, action_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Propose an action to the swarm."""
         proposal = {
             "type": action_type,
             "params": params,
             "proposer": self.config.account_id
         }
-        
+
         # Collect votes from peers
-        votes = await self.consensus_manager.collect_votes(
-            proposal_id=str(hash(str(proposal))),
-            agents=self.swarm_peers,
-            proposal=proposal
+        votes = []
+        for peer in self.swarm_peers:
+            vote = await peer.evaluate_proposal(proposal)
+            votes.append(vote)
+
+        # Calculate consensus
+        total_votes = len(votes)
+        positive_votes = sum(1 for v in votes if v["decision"])
+        approval_rate = positive_votes / total_votes if total_votes > 0 else 0
+
+        # Check if consensus is reached
+        consensus = (
+            approval_rate >= self.swarm_config.min_confidence and
+            positive_votes >= self.swarm_config.min_votes
         )
-        
-        # Reach consensus
-        result = self.consensus_manager.reach_consensus(votes)
-        return {
-            **result,
-            "proposal": proposal
+
+        result = {
+            "consensus": consensus,
+            "approval_rate": approval_rate,
+            "total_votes": total_votes,
+            "reasons": [v["reasoning"] for v in votes]
         }
-    
-    async def evaluate_proposal(self, proposal: Dict) -> Dict:
-        """Evaluate a proposal based on agent's role and expertise"""
+
+        logger.info(f"Proposal result: consensus={consensus}, approval_rate={approval_rate}")
+        return result
+
+    async def evaluate_proposal(self, proposal: Dict[str, Any]) -> Dict[str, Any]:
+        """Evaluate a proposal based on agent's role and expertise."""
         try:
-            # Implement role-specific evaluation logic
-            if self.swarm_config.role == "market_analyzer":
-                return await self._evaluate_market_conditions(proposal)
-            elif self.swarm_config.role == "risk_manager":
+            # Basic validation
+            if not proposal.get("type") or not proposal.get("params"):
+                return {
+                    "decision": False,
+                    "confidence": 0.0,
+                    "reasoning": "Invalid proposal format"
+                }
+
+            # Role-specific evaluation
+            if self.swarm_config.role == "risk_manager":
                 return await self._evaluate_risk(proposal)
+            elif self.swarm_config.role == "market_analyzer":
+                return await self._evaluate_market(proposal)
             elif self.swarm_config.role == "strategy_optimizer":
                 return await self._evaluate_strategy(proposal)
             else:
-                return await self._evaluate_general(proposal)
+                return {
+                    "decision": False,
+                    "confidence": 0.0,
+                    "reasoning": f"Unsupported role: {self.swarm_config.role}"
+                }
+
         except Exception as e:
-            self.logger.error(f"Proposal evaluation failed: {e}")
+            logger.error(f"Error evaluating proposal: {str(e)}")
             return {
                 "decision": False,
                 "confidence": 0.0,
                 "reasoning": f"Evaluation failed: {str(e)}"
             }
-    
-    async def _evaluate_market_conditions(self, proposal: Dict) -> Dict:
-        """Evaluate market conditions for a proposal"""
-        # Example market analysis logic
-        try:
-            if proposal["type"] == "trade":
-                price = await self.check_price(proposal["params"]["token"])
-                volume = await self.check_volume(proposal["params"]["token"])
-                
-                confidence = min(volume / 10000, 1.0)  # Example confidence calc
-                return {
-                    "decision": volume > 5000 and price > 0,
-                    "confidence": confidence,
-                    "reasoning": f"Market conditions: Price=${price}, Volume=${volume}"
-                }
-        except Exception as e:
-            return {
-                "decision": False,
-                "confidence": 0.0,
-                "reasoning": f"Market analysis failed: {str(e)}"
-            }
-    
-    async def _evaluate_risk(self, proposal: Dict) -> Dict:
-        """Evaluate risk factors for a proposal"""
+
+    async def _evaluate_risk(self, proposal: Dict[str, Any]) -> Dict[str, Any]:
+        """Evaluate proposal from risk management perspective."""
         # Implement risk evaluation logic
         return {
             "decision": True,
             "confidence": 0.8,
-            "reasoning": "Basic risk check passed"
+            "reasoning": "Risk levels acceptable"
         }
-    
-    async def _evaluate_strategy(self, proposal: Dict) -> Dict:
-        """Evaluate strategy optimization for a proposal"""
-        # Implement strategy evaluation logic
+
+    async def _evaluate_market(self, proposal: Dict[str, Any]) -> Dict[str, Any]:
+        """Evaluate proposal from market analysis perspective."""
+        # Implement market analysis logic
         return {
             "decision": True,
             "confidence": 0.9,
-            "reasoning": "Strategy parameters within bounds"
+            "reasoning": "Market conditions favorable"
         }
-    
-    async def _evaluate_general(self, proposal: Dict) -> Dict:
-        """General proposal evaluation"""
+
+    async def _evaluate_strategy(self, proposal: Dict[str, Any]) -> Dict[str, Any]:
+        """Evaluate proposal from strategy optimization perspective."""
+        # Implement strategy evaluation logic
         return {
             "decision": True,
-            "confidence": 0.7,
-            "reasoning": "Basic validation passed"
+            "confidence": 0.85,
+            "reasoning": "Strategy aligns with objectives"
         }
-    
-    async def check_price(self, token: str) -> float:
-        """Check token price"""
-        # Implement price checking logic
-        return 1.0
-    
-    async def check_volume(self, token: str) -> float:
-        """Check token volume"""
-        # Implement volume checking logic
-        return 10000.0 
