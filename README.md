@@ -22,7 +22,7 @@ These agents collaborate through a consensus mechanism, where each agent:
 2. Provides a confidence score with its decision
 3. Explains its reasoning
 
-Each agent votes with a confidence score, and only opportunities meeting the minimum consensus thresholds (configurable via SwarmConfig) are executed. This distributed agent decision-making helps prevent individual agent biases and reduces risk through swarm intelligence.
+Collectively, the swarm makes decisions that are more informed and less risky than any single agent could achieve and executes transactions on the NEAR blockchain.
 
 ## ⚡️ Quick Start
 
