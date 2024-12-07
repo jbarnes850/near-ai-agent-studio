@@ -13,7 +13,7 @@ A production-ready starter kit for building AI-powered agents and multi-agent sw
 Swarm intelligence is a collaborative decision-making approach where multiple specialized agents work together to achieve better outcomes than any single agent could alone. In this framework:
 
 - **Market Analyzer** agents evaluate price data and trading volumes
-- **Risk Manager** agents assess potential risks and exposure 
+- **Risk Manager** agents assess potential risks and exposure
 - **Strategy Optimizer** agents fine-tune execution parameters
 
 These agents collaborate through a consensus mechanism, where each agent:
@@ -47,10 +47,64 @@ The quickstart script will:
 > **Note**: This template runs on NEAR testnet by default for safe development.
 > Always test thoroughly before deploying to mainnet.
 
-## Run example strategy
+## System Architecture
 
-```bash
-python examples/swarm_trading.py
+```mermaid
+graph TB
+    %% Core Components
+    Core[Agent Core]
+    style Core fill:black,stroke:#00C1DE,stroke-width:3px,color:white
+
+    %% Integration Layer
+    NEAR_Int[NEAR Integration]
+    LLM_Int[LLM Integration]
+    Mem[Memory Manager]
+    style NEAR_Int fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    style LLM_Int fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    style Mem fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+
+    %% External Services
+    NEAR[NEAR Protocol]
+    LLM[Hyperbolic AI]
+    Storage[State Storage]
+    style NEAR fill:#00C1DE,stroke:black,stroke-width:2px,color:black
+    style LLM fill:#00C1DE,stroke:black,stroke-width:2px,color:black
+    style Storage fill:#00C1DE,stroke:black,stroke-width:2px,color:black
+
+    %% Swarm Agents
+    subgraph Swarm[AI Swarm]
+        direction TB
+        Agent1[Market Analyzer]
+        Agent2[Risk Manager]
+        Agent3[Strategy Optimizer]
+        
+        style Agent1 fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Agent2 fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Agent3 fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    end
+    style Swarm fill:none,stroke:#00C1DE,stroke-width:3px,color:white
+
+    %% Connections
+    Core --> NEAR_Int
+    Core --> LLM_Int
+    Core --> Mem
+    Core --> Swarm
+    NEAR_Int <--> NEAR
+    LLM_Int <--> LLM
+    Mem <--> Storage
+    
+    %% Swarm Connections
+    Agent1 <--> Agent2
+    Agent2 <--> Agent3
+    Agent3 <--> Agent1
+
+    %% Labels
+    classDef label fill:none,stroke:none,color:white
+    class Core,NEAR_Int,LLM_Int,Mem,NEAR,LLM,Storage,Agent1,Agent2,Agent3 label
+
+    %% Title
+    classDef title fill:none,stroke:none,color:#00C1DE,font-size:18px
+    class Title title
 ```
 
 ## 🎯 Key Features
