@@ -61,20 +61,31 @@ import asyncio
 from near_swarm.core.agent import AgentConfig
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 from near_swarm.core.config import load_config
+from near_swarm.core.near_integration import NEARConnection
 
 async def run_strategy():
     \"\"\"Run the {args.name} strategy.\"\"\"
+    agents = []
     try:
-        # Initialize your strategy here
+        # Initialize configuration and NEAR connection
         config = load_config()
+        near = NEARConnection(config)
+        await near.check_account()
+
+        # Initialize your agents here
         agent = SwarmAgent(
             config,
             SwarmConfig(role="market_analyzer", min_confidence=0.7)
         )
+        agents.append(agent)
+
         # Add your strategy logic here
         pass
+
     finally:
-        await agent.close()
+        # Close all agent connections
+        for agent in agents:
+            await agent.close()
 
 if __name__ == "__main__":
     asyncio.run(run_strategy())
