@@ -7,8 +7,9 @@ import json
 import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+import argparse
 
-from near_swarm.core.cli import main
+from near_swarm.core.cli import main, init_command, run_command, create_agent_command
 from near_swarm.core.agent import AgentConfig
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 
@@ -18,7 +19,7 @@ def env_setup():
     os.environ.update({
         'NEAR_NETWORK': 'testnet',
         'NEAR_ACCOUNT_ID': 'test.testnet',
-        'NEAR_PRIVATE_KEY': 'ed25519:test',
+        'NEAR_PRIVATE_KEY': 'ed25519:3D4YudUQRE39Lc4JHghuB5WM8kbgDDa34mnrEP5DdTApVH81af3e7MvFrog1CMNn67PCQmNkxQLPoacMuZydf2hL',
         'LLM_PROVIDER': 'hyperbolic',
         'LLM_API_KEY': 'test_key',
         'LLM_MODEL': 'meta-llama/Llama-3.3-70B-Instruct',
@@ -36,8 +37,8 @@ async def test_init_command(env_setup, tmp_path):
     with patch('sys.argv', ['near-swarm', 'init', 'test_strategy']), \
          patch('near_swarm.core.cli.Path.cwd', return_value=tmp_path):
 
-        # Run init command
-        await main()
+        # Run init command directly without asyncio.run
+        await init_command(argparse.Namespace(command='init', name='test_strategy'))
 
         # Verify files were created
         strategy_dir = tmp_path / 'test_strategy'
@@ -60,11 +61,13 @@ async def test_create_agent_command(env_setup):
 
         mock_connection.return_value.check_account = AsyncMock(return_value=True)
 
-        # Run create-agent command
-        await main()
-
-        # Verify agent creation logs (since we can't access the agent directly)
-        # The command should complete without errors
+        # Run create-agent command directly
+        await create_agent_command(argparse.Namespace(
+            command='create-agent',
+            role='market_analyzer',
+            min_confidence=0.7,
+            min_votes=2
+        ))
 
 @pytest.mark.asyncio
 async def test_run_simple_strategy(env_setup):
@@ -76,8 +79,12 @@ async def test_run_simple_strategy(env_setup):
         mock_connection.return_value.check_account = AsyncMock(return_value=True)
         mock_query.return_value = '{"decision": true, "confidence": 0.85, "reasoning": "Test reasoning"}'
 
-        # Run simple strategy
-        await main()
+        # Run simple strategy directly
+        await run_command(argparse.Namespace(
+            command='run',
+            example='simple_strategy',
+            config=None
+        ))
 
         # Verify LLM was queried
         assert mock_query.called
@@ -120,11 +127,14 @@ if __name__ == "__main__":
     with patch('sys.argv', ['near-swarm', 'run', '--config', str(strategy_dir / 'config.json')]), \
          patch('near_swarm.core.near_integration.NEARConnection') as mock_connection:
 
-
         mock_connection.return_value.check_account = AsyncMock(return_value=True)
 
-        # Run custom strategy
-        await main()
+        # Run custom strategy directly
+        await run_command(argparse.Namespace(
+            command='run',
+            example=None,
+            config=str(strategy_dir / 'config.json')
+        ))
 
         # Verify connection was checked
         assert mock_connection.return_value.check_account.called

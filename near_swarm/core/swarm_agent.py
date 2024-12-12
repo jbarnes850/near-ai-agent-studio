@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
 from near_swarm.core.agent import NEARAgent, AgentConfig
-from near_swarm.core.llm_provider import LLMProvider, create_llm_provider
+from near_swarm.core.llm_provider import LLMProvider, create_llm_provider, LLMConfig
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,13 @@ class SwarmAgent(NEARAgent):
         super().__init__(config)
         self.swarm_config = swarm_config
         self.swarm_peers: List[SwarmAgent] = []
-        self.llm_provider = create_llm_provider()
+        self.llm_provider = create_llm_provider(LLMConfig(
+            provider=config.llm_provider,
+            api_key=config.llm_api_key,
+            model=config.llm_model,
+            temperature=config.llm_temperature,
+            max_tokens=config.llm_max_tokens
+        ))
         logger.info(f"Initialized swarm agent with role: {swarm_config.role}")
 
     async def join_swarm(self, peers: List['SwarmAgent']):

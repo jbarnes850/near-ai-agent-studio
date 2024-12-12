@@ -9,25 +9,28 @@ from typing import List, Dict, Any
 
 from near_swarm.core.agent import AgentConfig
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
+from near_swarm.core.config import load_config
 
 logger = logging.getLogger(__name__)
 
 async def run_simple_strategy():
     """Run a simple strategy demonstrating swarm intelligence."""
     try:
-        # Initialize agents with different roles
+        # Initialize agents with different roles using environment config
+        config = load_config()
+
         market_analyzer = SwarmAgent(
-            AgentConfig(),  # Will be configured by quickstart.sh
+            config,
             SwarmConfig(role="market_analyzer", min_confidence=0.7)
         )
 
         risk_manager = SwarmAgent(
-            AgentConfig(),
+            config,
             SwarmConfig(role="risk_manager", min_confidence=0.8)
         )
 
         strategy_optimizer = SwarmAgent(
-            AgentConfig(),
+            config,
             SwarmConfig(role="strategy_optimizer", min_confidence=0.75)
         )
 

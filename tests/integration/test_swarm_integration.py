@@ -14,9 +14,12 @@ def agent_config():
     return AgentConfig(
         near_network="testnet",
         account_id="test.testnet",
-        private_key="ed25519:test",
+        private_key="ed25519:3D4YudUQRE39Lc4JHghuB5WM8kbgDDa34mnrEP5DdTApVH81af3e7MvFrog1CMNn67PCQmNkxQLPoacMuZydf2hL",
         llm_provider="hyperbolic",
-        llm_api_key="test_key"
+        llm_api_key="test_key",
+        llm_model="meta-llama/Llama-3.3-70B-Instruct",
+        llm_temperature=0.7,
+        llm_max_tokens=2000
     )
 
 @pytest.mark.asyncio
@@ -55,7 +58,8 @@ async def test_swarm_consensus(agent_config):
                 "recipient": "bob.testnet",
                 "amount": "1",
                 "token": "NEAR"
-            }
+            },
+            "proposer": agent_config.account_id
         }
 
         # Get consensus
@@ -98,7 +102,8 @@ async def test_swarm_transaction_execution(agent_config):
             "params": {
                 "recipient": "bob.testnet",
                 "amount": "1"
-            }
+            },
+            "proposer": agent_config.account_id
         }
 
         # Evaluate proposal

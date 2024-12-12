@@ -25,6 +25,9 @@ class AgentConfig:
     private_key: str
     llm_provider: str
     llm_api_key: str
+    llm_model: str = "meta-llama/Llama-3.3-70B-Instruct"
+    llm_temperature: float = 0.7
+    llm_max_tokens: int = 2000
     node_url: Optional[str] = None
     max_retries: int = 5
     retry_delay: float = 2.0

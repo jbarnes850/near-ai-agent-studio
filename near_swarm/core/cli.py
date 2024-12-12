@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 
 from near_swarm.core.agent import AgentConfig
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
+from near_swarm.core.config import load_config
 from near_swarm.examples.simple_strategy import run_simple_strategy
 
 # Configure logging
@@ -25,37 +26,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def load_config() -> AgentConfig:
-    """Load configuration from environment variables."""
-    load_dotenv()
-
-    required_vars = [
-        'NEAR_NETWORK',
-        'NEAR_ACCOUNT_ID',
-        'NEAR_PRIVATE_KEY',
-        'LLM_PROVIDER',
-        'LLM_API_KEY'
-    ]
-
-    # Check for required environment variables
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-    if missing_vars:
-        logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
-        sys.exit(1)
-
-    return AgentConfig(
-        near_network=os.getenv('NEAR_NETWORK', 'testnet'),
-        account_id=os.getenv('NEAR_ACCOUNT_ID'),
-        private_key=os.getenv('NEAR_PRIVATE_KEY'),
-        llm_provider=os.getenv('LLM_PROVIDER'),
-        llm_api_key=os.getenv('LLM_API_KEY')
-    )
-
 async def init_command(args):
     """Initialize a new strategy."""
     try:
+        # Get current working directory from args
+        cwd = Path.cwd()
+
         # Create strategy directory
-        strategy_dir = Path(args.name)
+        strategy_dir = cwd / args.name
         if strategy_dir.exists():
             logger.error(f"Directory {args.name} already exists")
             return
@@ -82,11 +60,21 @@ async def init_command(args):
 import asyncio
 from near_swarm.core.agent import AgentConfig
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
+from near_swarm.core.config import load_config
 
 async def run_strategy():
     \"\"\"Run the {args.name} strategy.\"\"\"
-    # Initialize your strategy here
-    pass
+    try:
+        # Initialize your strategy here
+        config = load_config()
+        agent = SwarmAgent(
+            config,
+            SwarmConfig(role="market_analyzer", min_confidence=0.7)
+        )
+        # Add your strategy logic here
+        pass
+    finally:
+        await agent.close()
 
 if __name__ == "__main__":
     asyncio.run(run_strategy())
@@ -111,7 +99,7 @@ async def run_command(args):
                 return
         else:
             # Load strategy config
-            config_path = Path(args.config or "config.json")
+            config_path = Path(args.config).resolve()
             if not config_path.exists():
                 logger.error(f"Config file not found: {config_path}")
                 return
@@ -119,8 +107,11 @@ async def run_command(args):
             with open(config_path) as f:
                 config = json.load(f)
 
+            # Get strategy directory from config path
+            strategy_dir = config_path.parent
+
             # Run custom strategy
-            strategy_path = Path(config["name"] + ".py")
+            strategy_path = strategy_dir / f"{config['name']}.py"
             if not strategy_path.exists():
                 logger.error(f"Strategy file not found: {strategy_path}")
                 return
