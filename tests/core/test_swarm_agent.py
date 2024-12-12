@@ -14,11 +14,12 @@ from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 def agent_config():
     """Create test agent configuration."""
     return AgentConfig(
-        near_network="testnet",
+        network="testnet",
         account_id="test.testnet",
         private_key="ed25519:3D4YudUQRE39Lc4JHghuB5WM8kbgDDa34mnrEP5DdTApVH81af3e7MvFronz1F2u9wsnS4jx4nX4UNqm8M2n8acG",
         llm_provider="hyperbolic",
-        llm_api_key="test_key"
+        llm_api_key="test_key",
+        api_url="https://api.hyperbolic.ai/v1"
     )
 
 

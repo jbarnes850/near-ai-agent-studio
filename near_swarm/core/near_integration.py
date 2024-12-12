@@ -117,57 +117,36 @@ class NEARConnection:
             logger.error(f"Failed to initialize NEAR connection: {str(e)}")
             raise NEARConnectionError(f"NEAR connection failed: {str(e)}")
 
-    async def check_account(self, account_id: str) -> None:
+    async def check_account(self, account_id: str) -> bool:
         """Check if the account exists and initialize it if needed."""
         try:
-            # Get account details
-            account_info = await self.account.state()
-            logger.debug(f"Account info: {account_info}")
-
-            # Format the public key
-            public_key = self.signer.key_pair.public_key
-            public_key_str = f"ed25519:{base58.b58encode(public_key).decode('utf-8')}"
-
-            # Use near CLI to add the access key
-            import subprocess
-            import os
-            import json
-
-            # Create a temporary file to store the key
-            key_file = "/tmp/near_key.json"
-            key_data = {
-                "account_id": self.account_id,
-                "public_key": public_key_str,
-                "private_key": f"ed25519:{base58.b58encode(self.signer.key_pair._secret_key.to_bytes()).decode('utf-8')}"
+            # Get account details using provider directly
+            account_request = {
+                "jsonrpc": "2.0",
+                "id": "dontcare",
+                "method": "query",
+                "params": {
+                    "request_type": "view_account",
+                    "finality": "final",
+                    "account_id": account_id
+                }
             }
 
-            with open(key_file, 'w') as f:
-                json.dump(key_data, f)
+            response = requests.post(self.node_url, json=account_request)
+            response.raise_for_status()
+            account_data = response.json()
 
-            try:
-                # Add the key using near CLI
-                result = subprocess.run(
-                    [
-                        "near", "add-key",
-                        self.account_id,
-                        public_key_str,
-                        "--networkId", self.network,
-                        "--keyPath", key_file
-                    ],
-                    capture_output=True,
-                    text=True
-                )
+            if 'error' in account_data:
+                if 'does not exist' in account_data['error']['cause']['name']:
+                    return False
+                raise NEARConnectionError(f"Failed to check account: {account_data['error']}")
 
-                if result.returncode != 0:
-                    logger.warning(f"Failed to add key: {result.stderr}")
-                else:
-                    logger.info("Access key added successfully")
-            finally:
-                # Clean up the temporary file
-                if os.path.exists(key_file):
-                    os.remove(key_file)
+            if not isinstance(account_data, dict) or 'result' not in account_data:
+                raise NEARConnectionError("Invalid account data format from RPC endpoint")
 
-            logger.info(f"Successfully initialized NEAR connection for {account_id}")
+            logger.debug(f"Account info: {account_data['result']}")
+            return True
+
         except Exception as e:
             logger.error(f"Failed to check account: {str(e)}")
             raise NEARConnectionError(f"Failed to check account: {str(e)}")

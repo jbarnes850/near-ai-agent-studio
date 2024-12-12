@@ -17,7 +17,8 @@ def agent_config():
         account_id="test.testnet",
         private_key="ed25519:3D4YudUQRE39Lc4JHghuB5WM8kbgDDa34mnrEP5DdTApVH81af3e7MvFronz1F2u9wsnS4jx4nX4UNqm8M2n8acG",
         llm_provider="hyperbolic",
-        llm_api_key="test_key"
+        llm_api_key="test_key",
+        api_url="https://api.hyperbolic.ai/v1"
     )
 
 
@@ -30,7 +31,8 @@ async def test_config_validation():
         account_id="test.testnet",
         private_key="ed25519:3D4YudUQRE39Lc4JHghuB5WM8kbgDDa34mnrEP5DdTApVH81af3e7MvFronz1F2u9wsnS4jx4nX4UNqm8M2n8acG",
         llm_provider="hyperbolic",
-        llm_api_key="test_key"
+        llm_api_key="test_key",
+        api_url="https://api.hyperbolic.ai/v1"
     )
     assert config.network == "testnet"
     assert config.account_id == "test.testnet"
@@ -42,7 +44,8 @@ async def test_config_validation():
             account_id="test.testnet",
             private_key="ed25519:3D4YudUQRE39Lc4JHghuB5WM8kbgDDa34mnrEP5DdTApVH81af3e7MvFronz1F2u9wsnS4jx4nX4UNqm8M2n8acG",
             llm_provider="hyperbolic",
-            llm_api_key="test_key"
+            llm_api_key="test_key",
+            api_url="https://api.hyperbolic.ai/v1"
         )
 
 
