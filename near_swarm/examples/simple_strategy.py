@@ -51,12 +51,14 @@ async def run_simple_strategy():
 
         # Create a test proposal
         proposal = {
-            "receiver_id": "bob.testnet",
-            "actions": [{
-                "Transfer": {
-                    "deposit": str(int(1 * 10**24))  # 1 NEAR in yoctoNEAR
-                }
-            }]
+            "type": "test_transaction",
+            "params": {
+                "action": "transfer",
+                "recipient": "bob.testnet",
+                "amount": "1",
+                "token": "NEAR"
+            },
+            "proposer": config.account_id
         }
 
         print("\n=== Running Simple Strategy Example ===")
@@ -85,9 +87,33 @@ async def run_simple_strategy():
 
         if total_votes >= 2:
             print("=== Executing Transaction ===")
-            # Execute the transaction using NEAR connection
-            await near.send_transaction(proposal)
-            print("Transaction executed successfully!")
+            try:
+                # Convert the proposal to NEAR transaction format
+                near_tx = {
+                    "receiver_id": proposal["params"]["recipient"],
+                    "actions": [{
+                        "Transfer": {
+                            "deposit": str(int(float(proposal["params"]["amount"]) * 10**24))  # Convert to yoctoNEAR
+                        }
+                    }]
+                }
+                result = await near.send_transaction(near_tx)
+
+                # Validate transaction result
+                if isinstance(result, dict):
+                    if "result" in result and "transaction_outcome" in result["result"]:
+                        print("Transaction executed successfully!")
+                        print(f"Transaction ID: {result['result']['transaction_outcome']['id']}")
+                    elif "transaction_outcome" in result:
+                        print("Transaction executed successfully!")
+                        print(f"Transaction ID: {result['transaction_outcome']['id']}")
+                    else:
+                        raise ValueError("Invalid transaction response format")
+                else:
+                    raise ValueError("Invalid transaction response type")
+            except Exception as e:
+                logger.error(f"Failed to execute transaction: {str(e)}")
+                raise
 
     finally:
         # Close all agent connections

@@ -306,8 +306,23 @@ async def test_run_simple_strategy(env_setup):
         })
 
         # Mock Account class
-        with patch('near_api.account.Account') as mock_account_class:
+        with patch('near_api.account.Account') as mock_account_class, \
+             patch('near_swarm.core.swarm_agent.SwarmAgent') as mock_swarm_agent_class:
             mock_account_class.return_value = mock_account
+
+            # Create mock swarm agents
+            mock_agents = []
+            for role in ['risk_manager', 'market_analyzer', 'strategy_optimizer']:
+                mock_agent = MagicMock()
+                mock_agent.swarm_config.role = role
+                mock_agent.evaluate_proposal = AsyncMock(return_value={
+                    "decision": True,
+                    "confidence": 0.85,
+                    "reasoning": f"Test reasoning from {role}"
+                })
+                mock_agents.append(mock_agent)
+
+            mock_swarm_agent_class.side_effect = mock_agents
 
             # Set up LLM mock
             mock_query.return_value = '{"decision": true, "confidence": 0.85, "reasoning": "Test reasoning"}'

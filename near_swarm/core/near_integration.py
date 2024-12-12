@@ -152,8 +152,8 @@ class NEARConnection:
                             return result["result"]
                         else:
                             logger.warning("Unexpected transaction response format")
-                            return result
-                    return result
+                            return {"result": result}  # Wrap raw response
+                    return {"result": result}  # Wrap raw response
                 except Exception as e:
                     logger.error(f"Transaction failed: {str(e)}")
                     raise
