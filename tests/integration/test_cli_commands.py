@@ -120,7 +120,11 @@ async def run_strategy():
     try:
         # Initialize configuration and NEAR connection
         config = load_config()
-        near = NEARConnection(config)
+        near = NEARConnection(
+            config=config,
+            account_id=config.account_id,
+            private_key=config.private_key
+        )
         await near.check_account()
 
         # Initialize agent
