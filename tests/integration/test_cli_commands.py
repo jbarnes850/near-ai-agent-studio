@@ -121,11 +121,11 @@ async def run_strategy():
         # Initialize configuration and NEAR connection
         config = load_config()
         near = NEARConnection(
-            config=config,
+            network=config.network,
             account_id=config.account_id,
             private_key=config.private_key
         )
-        await near.check_account()
+        await near.check_account(config.account_id)
 
         # Initialize agent
         agent = SwarmAgent(

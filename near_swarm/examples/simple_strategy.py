@@ -23,11 +23,11 @@ async def run_simple_strategy():
 
         # Initialize NEAR connection first
         near = NEARConnection(
-            config=config,
+            network=config.network,
             account_id=config.account_id,
             private_key=config.private_key
         )
-        await near.check_account()
+        await near.check_account(config.account_id)
 
         market_analyzer = SwarmAgent(
             config,
