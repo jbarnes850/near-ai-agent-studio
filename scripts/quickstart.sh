@@ -1,7 +1,14 @@
 #!/bin/bash
 
-# Exit on error
+# Exit on error and enable debugging
 set -e
+set -x
+
+# Create log directory if it doesn't exist
+mkdir -p logs
+
+# Redirect all output to both console and log file
+exec 1> >(tee -a "logs/quickstart_$(date +%s).log") 2>&1
 
 clear
 
@@ -64,28 +71,32 @@ center_text "Do not use real funds or deploy to mainnet without thorough testing
 center_text "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Function to show progress with centered text
+# Function to show progress with debug support
 show_progress() {
     local message="$1"
     local duration="$2"
     local width=50
     local progress=0
-    
+
+    # Print debug message first
+    echo "DEBUG: Starting task - $message"
+
     # Center the progress bar
-    local total_width=$(( ${#message} + width + 3 ))  # +3 for space and brackets
+    local total_width=$(( ${#message} + width + 3 ))
     local padding=$(( (TERM_WIDTH - total_width) / 2 ))
-    
+
+    # Show initial progress bar
     printf "%${padding}s%s " "" "$message"
-    while [ $progress -lt $width ]; do
+    for ((i=0; i<width; i++)); do
         echo -n "▱"
-        ((progress++))
     done
-    echo -ne "\r%${padding}s%s " "" "$message"
-    progress=0
-    while [ $progress -lt $width ]; do
+    echo ""
+
+    # Show completion
+    sleep "$duration"
+    printf "%${padding}s%s " "" "$message"
+    for ((i=0; i<width; i++)); do
         echo -n "▰"
-        sleep $(bc <<< "scale=3; $duration/$width")
-        ((progress++))
     done
     echo ""
 }
@@ -103,25 +114,85 @@ section_header "🔍 Checking Prerequisites"
 if ! command -v python3 &> /dev/null; then
     echo "❌ Python 3 is required but not found. Please install Python 3 and try again."
     exit 1
+fi
+
+# Check/install near-cli
+if ! command -v near &> /dev/null; then
+    echo "📦 Installing NEAR CLI..."
+    if ! npm install -g near-cli > /dev/null 2>&1; then
+        echo "❌ Failed to install NEAR CLI. Please install Node.js and try again."
+        exit 1
+    fi
+    echo "✅ NEAR CLI installed"
 else
     python_version=$(python3 --version)
-    center_text "✅ $python_version found"
+    center_text "✅ $python_version and NEAR CLI found"
 fi
 
 section_header "🛠️  Setting Up Development Environment"
 
 # Create virtual environment
 center_text "📦 Creating Python virtual environment..."
+if [ -d "venv" ]; then
+    echo "⚠️  Existing virtual environment found. Removing..."
+    rm -rf venv
+fi
+
 show_progress "Creating virtual environment" 2
-python3 -m venv venv
-source venv/bin/activate
+
+# Add debug output
+echo "Debug: Using Python version $(python3 --version)"
+echo "Debug: Python executable path: $(which python3)"
+echo "Debug: Current directory: $(pwd)"
+echo "Debug: Current user: $(whoami)"
+
+# Check Python venv module
+if ! python3 -c "import venv" 2>/dev/null; then
+    echo "❌ Python venv module not available. Installing..."
+    sudo apt-get update && sudo apt-get install -y python3-venv
+fi
+
+# Try to create virtual environment
+echo "Debug: Creating new virtual environment"
+if ! python3 -m venv venv; then
+    echo "❌ Failed to create virtual environment. Error details:"
+    python3 -m venv --help
+    python3 -m pip debug
+    exit 1
+fi
+
+# Try to activate with debug output
+echo "Debug: Attempting to activate virtual environment"
+if ! source venv/bin/activate; then
+    echo "❌ Failed to activate virtual environment. Error details:"
+    ls -la venv/bin/
+    exit 1
+fi
+
+# Verify activation
+if [ -z "$VIRTUAL_ENV" ]; then
+    echo "❌ Virtual environment not properly activated"
+    exit 1
+fi
+
 center_text "✅ Virtual environment created and activated"
 
 # Install dependencies
 echo ""
 echo "📚 Installing dependencies..."
 show_progress "Installing required packages" 3
-pip install -r requirements.txt > /dev/null 2>&1
+
+# First upgrade pip
+if ! pip install --upgrade pip > /dev/null 2>&1; then
+    echo "❌ Failed to upgrade pip"
+    exit 1
+fi
+
+# Install packages with verbose output for debugging
+if ! pip install -r requirements.txt; then
+    echo "❌ Failed to install dependencies. See error messages above."
+    exit 1
+fi
 echo "✅ Dependencies installed"
 
 # Copy environment template if not exists
@@ -191,8 +262,9 @@ else
         PRIVATE_KEY=$(jq -r '.private_key' "$CREDS_FILE")
         
         # Update .env file
-        sed -i '' "s/NEAR_ACCOUNT_ID=.*/NEAR_ACCOUNT_ID=$ACCOUNT_ID/" .env
-        sed -i '' "s/NEAR_PRIVATE_KEY=.*/NEAR_PRIVATE_KEY=$PRIVATE_KEY/" .env
+        sed -i "s|NEAR_ACCOUNT_ID=.*|NEAR_ACCOUNT_ID=$ACCOUNT_ID|" .env
+        sed -i "s|NEAR_PRIVATE_KEY=.*|NEAR_PRIVATE_KEY=$PRIVATE_KEY|" .env
+        sed -i "s|NEAR_NODE_URL=.*|NEAR_NODE_URL=https://rpc.testnet.fastnear.com|" .env
         echo "✅ Credentials updated in environment file"
         
         # Validate existing wallet
@@ -215,6 +287,29 @@ show_progress "Initializing example strategy" 2
 echo "✅ Example strategy created"
 
 echo ""
+section_header "🚀 Launching Default Swarm Scenario"
+echo "Executing sample transaction with swarm agent..."
+show_progress "Initializing swarm agent" 2
+
+# Run the simple strategy example
+if python3 -c "
+import asyncio
+from near_swarm.examples.simple_strategy import run_simple_strategy
+try:
+    asyncio.run(run_simple_strategy())
+    print('✅ Sample transaction executed successfully')
+except Exception as e:
+    print(f'❌ Failed to execute sample transaction: {str(e)}')
+    exit(1)
+"; then
+    echo "✅ Default swarm scenario completed"
+else
+    echo "❌ Failed to run default scenario"
+    echo "Please check the logs for more details"
+    exit 1
+fi
+
+echo ""
 echo "🎉 Setup Complete!"
 echo "━━━━━━━━━━━━━━"
 echo "Your development environment is ready:"
@@ -222,6 +317,7 @@ echo "✅ Python virtual environment"
 echo "✅ All dependencies installed"
 echo "✅ NEAR testnet wallet configured"
 echo "✅ Example strategy created"
+echo "✅ Default scenario executed"
 echo ""
 echo "⚠️  Remember: This is a testnet environment for development"
 echo "   Do not use real funds or deploy to mainnet without thorough testing"
@@ -292,4 +388,4 @@ fi
 echo "📚 Resources:"
 echo "- Documentation: docs/"
 echo "- Examples: examples/"
-echo "- Support: https://discord.gg/near" 
+echo "- Support: https://discord.gg/near"               

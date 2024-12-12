@@ -20,21 +20,25 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AgentConfig:
     """Agent configuration."""
-    near_network: str
+    network: str
     account_id: str
     private_key: str
     llm_provider: str
     llm_api_key: str
+    llm_model: str = "meta-llama/Llama-3.3-70B-Instruct"
+    llm_temperature: float = 0.7
+    llm_max_tokens: int = 2000
     node_url: Optional[str] = None
+    api_url: Optional[str] = None  # Added for Hyperbolic API support
     max_retries: int = 5
     retry_delay: float = 2.0
 
     def __post_init__(self):
         """Validate configuration."""
-        if not self.near_network:
-            raise ValueError("near_network is required")
-        if self.near_network not in ["mainnet", "testnet"]:
-            raise ValueError("near_network must be 'mainnet' or 'testnet'")
+        if not self.network:
+            raise ValueError("network is required")
+        if self.network not in ["mainnet", "testnet"]:
+            raise ValueError("network must be 'mainnet' or 'testnet'")
         if not self.account_id:
             raise ValueError("account_id is required")
         if "@" in self.account_id:
@@ -45,13 +49,15 @@ class AgentConfig:
             raise ValueError("llm_provider is required")
         if not self.llm_api_key:
             raise ValueError("llm_api_key is required")
+        if self.llm_provider.lower() == 'hyperbolic' and not self.api_url:
+            raise ValueError("api_url is required when using hyperbolic provider")
         if self.max_retries < 1:
             raise ValueError("max_retries must be at least 1")
         if self.retry_delay <= 0:
             raise ValueError("retry_delay must be positive")
 
 
-class NEARAgent:
+class Agent:
     """Base NEAR agent class."""
 
     def __init__(self, config: AgentConfig):
@@ -63,7 +69,7 @@ class NEARAgent:
     def _initialize_near_connection(self):
         """Initialize NEAR connection."""
         self.near_connection = NEARConnection(
-            network=self.config.near_network,
+            network=self.config.network,
             account_id=self.config.account_id,
             private_key=self.config.private_key,
             node_url=self.config.node_url

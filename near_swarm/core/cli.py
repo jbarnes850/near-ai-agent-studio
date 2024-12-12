@@ -1,17 +1,23 @@
 """
-Command Line Interface for NEAR AI Agent
-Provides a simple CLI for interacting with the NEAR AI Agent.
+Command Line Interface for NEAR Swarm Intelligence
+Provides a CLI for managing and running swarm agents.
 """
 
 import os
 import sys
+import json
 import asyncio
 import logging
 import argparse
-from typing import Optional
+import shutil
+from typing import Optional, Dict, Any
+from pathlib import Path
 from dotenv import load_dotenv
 
-from agent import create_agent, AgentConfig
+from near_swarm.core.agent import AgentConfig
+from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
+from near_swarm.core.config import load_config
+from near_swarm.examples.simple_strategy import run_simple_strategy
 
 # Configure logging
 logging.basicConfig(
@@ -20,42 +26,161 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def load_config() -> AgentConfig:
-    """Load configuration from environment variables."""
-    load_dotenv()
-    
-    required_vars = [
-        'NEAR_NETWORK',
-        'NEAR_ACCOUNT_ID',
-        'NEAR_PRIVATE_KEY',
-        'LLM_PROVIDER',
-        'LLM_API_KEY'
-    ]
-    
-    # Check for required environment variables
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-    if missing_vars:
-        logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
-        sys.exit(1)
-    
-    return AgentConfig(
-        near_network=os.getenv('NEAR_NETWORK', 'testnet'),
-        account_id=os.getenv('NEAR_ACCOUNT_ID'),
-        private_key=os.getenv('NEAR_PRIVATE_KEY'),
-        llm_provider=os.getenv('LLM_PROVIDER'),
-        llm_api_key=os.getenv('LLM_API_KEY')
-    )
+async def init_command(args):
+    """Initialize a new strategy."""
+    try:
+        # Get current working directory from args
+        cwd = Path.cwd()
+
+        # Create strategy directory
+        strategy_dir = cwd / args.name
+        if strategy_dir.exists():
+            logger.error(f"Directory {args.name} already exists")
+            return
+
+        strategy_dir.mkdir(parents=True)
+
+        # Create strategy files
+        config = {
+            "name": args.name,
+            "roles": ["market_analyzer", "risk_manager", "strategy_optimizer"],
+            "min_confidence": 0.7,
+            "min_votes": 2
+        }
+
+        # Write config file
+        with open(strategy_dir / "config.json", "w") as f:
+            json.dump(config, f, indent=2)
+
+        # Create strategy template
+        template = f"""\"\"\"
+{args.name} Strategy
+\"\"\"
+
+import asyncio
+from near_swarm.core.agent import AgentConfig
+from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
+from near_swarm.core.config import load_config
+from near_swarm.core.near_integration import NEARConnection
+
+async def run_strategy():
+    \"\"\"Run the {args.name} strategy.\"\"\"
+    agents = []
+    try:
+        # Initialize configuration and NEAR connection
+        config = load_config()
+        near = NEARConnection(config)
+        await near.check_account(config.account_id)
+
+        # Initialize your agents here
+        agent = SwarmAgent(
+            config,
+            SwarmConfig(role="market_analyzer", min_confidence=0.7)
+        )
+        agents.append(agent)
+
+        # Add your strategy logic here
+        pass
+
+    finally:
+        # Close all agent connections
+        for agent in agents:
+            await agent.close()
+
+if __name__ == "__main__":
+    asyncio.run(run_strategy())
+"""
+        with open(strategy_dir / f"{args.name}.py", "w") as f:
+            f.write(template)
+
+        logger.info(f"Initialized new strategy in {args.name}/")
+
+    except Exception as e:
+        logger.error(f"Error initializing strategy: {str(e)}")
+        raise RuntimeError(f"Strategy initialization failed: {str(e)}")
+
+async def run_command(args):
+    """Run a strategy."""
+    try:
+        # Load configuration
+        config = load_config()
+
+        # Format private key properly
+        private_key = config.private_key
+        if private_key and not private_key.startswith('ed25519:'):
+            private_key = f'ed25519:{private_key}'
+
+        # Initialize NEAR connection and account
+        from near_swarm.core.near_integration import NEARConnection
+        near = NEARConnection(
+            network=config.network,
+            account_id=config.account_id,
+            private_key=private_key,
+            node_url="https://rpc.testnet.fastnear.com"
+        )
+
+        if args.example:
+            if args.example == "simple_strategy":
+                logger.info("Running simple strategy example...")
+                try:
+                    result = await run_simple_strategy(near)
+                    logger.info("Simple strategy completed successfully")
+                    if isinstance(result, dict):
+                        logger.info("Swarm Decision Details:")
+                        if "swarm_decision" in result:
+                            decision = result["swarm_decision"]
+                            logger.info(f"Decision: {'Approved' if decision.get('decision') else 'Rejected'}")
+                            logger.info(f"Reasoning: {decision.get('reasoning', 'No reasoning provided')}")
+                            logger.info(f"Confidence: {decision.get('confidence', 'N/A')}")
+                        logger.info(f"Status: {result.get('status', 'unknown')}")
+                        logger.info(f"Message: {result.get('message', 'No message provided')}")
+                except Exception as e:
+                    logger.error(f"Failed to run simple strategy: {str(e)}")
+                    raise
+            else:
+                logger.error(f"Unknown example strategy: {args.example}")
+                return
+        else:
+            # Load strategy config
+            config_path = Path(args.config).resolve()
+            if not config_path.exists():
+                logger.error(f"Config file not found: {config_path}")
+                return
+
+            # PLACEHOLDER: Custom strategy loading and execution code
+
+    except Exception as e:
+        logger.error(f"Error running strategy: {str(e)}")
+        raise
+
+async def create_agent_command(args):
+    """Create a new agent with specified role."""
+    try:
+        config = load_config()
+        agent = SwarmAgent(
+            config,
+            SwarmConfig(
+                role=args.role,
+                min_confidence=args.min_confidence,
+                min_votes=args.min_votes
+            )
+        )
+        logger.info(f"Created agent with role: {args.role}")
+        return agent
+    except Exception as e:
+        logger.error(f"Error creating agent: {str(e)}")
+        raise RuntimeError(f"Agent creation failed: {str(e)}")
 
 async def interactive_mode(agent):
     """Run the agent in interactive mode."""
     print("NEAR AI Agent Interactive Mode")
     print("Type 'exit' to quit")
     print("Type 'help' for available commands")
-    
+
     while True:
         try:
             user_input = input("\nEnter command or message > ").strip()
-            
+
             if user_input.lower() == 'exit':
                 break
             elif user_input.lower() == 'help':
@@ -71,7 +196,7 @@ async def interactive_mode(agent):
                 # Process as a message to the agent
                 response = await agent.process_message(user_input)
                 print(f"\nAgent: {response}")
-        
+
         except KeyboardInterrupt:
             break
         except Exception as e:
@@ -87,34 +212,57 @@ def print_help():
 
 def main():
     """Main entry point for the CLI."""
-    parser = argparse.ArgumentParser(description="NEAR AI Agent CLI")
-    parser.add_argument(
+    parser = argparse.ArgumentParser(description="NEAR Swarm Intelligence CLI")
+    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
+
+    # Init command
+    init_parser = subparsers.add_parser("init", help="Initialize a new strategy")
+    init_parser.add_argument("name", help="Strategy name")
+
+    # Run command
+    run_parser = subparsers.add_parser("run", help="Run a strategy")
+    run_parser.add_argument("--example", help="Run example strategy (e.g., simple_strategy)")
+    run_parser.add_argument("--config", help="Path to strategy config file")
+
+    # Create agent command
+    create_parser = subparsers.add_parser("create-agent", help="Create a new agent")
+    create_parser.add_argument("role", choices=["market_analyzer", "risk_manager", "strategy_optimizer"])
+    create_parser.add_argument("--min-confidence", type=float, default=0.7)
+    create_parser.add_argument("--min-votes", type=int, default=2)
+
+    # Interactive mode
+    interactive_parser = subparsers.add_parser("interactive", help="Run in interactive mode")
+    interactive_parser.add_argument(
         '--config',
         type=str,
         default='.env',
         help='Path to configuration file (default: .env)'
     )
-    parser.add_argument(
+    interactive_parser.add_argument(
         '--network',
         type=str,
         choices=['testnet', 'mainnet'],
         help='NEAR network to use (overrides config)'
     )
-    
+
     args = parser.parse_args()
-    
+
     try:
-        # Load configuration
-        config = load_config()
-        if args.network:
-            config.near_network = args.network
-        
-        # Create agent
-        agent = create_agent(config)
-        
-        # Run interactive mode
-        asyncio.run(interactive_mode(agent))
-        
+        if args.command == "init":
+            asyncio.run(init_command(args))
+        elif args.command == "run":
+            asyncio.run(run_command(args))
+        elif args.command == "create-agent":
+            asyncio.run(create_agent_command(args))
+        elif args.command == "interactive" or not args.command:
+            config = load_config()
+            if hasattr(args, 'network') and args.network:
+                config.near_network = args.network
+            agent = SwarmAgent(config, SwarmConfig(role="market_analyzer"))
+            asyncio.run(interactive_mode(agent))
+        else:
+            parser.print_help()
+
     except KeyboardInterrupt:
         print("\nExiting...")
     except Exception as e:

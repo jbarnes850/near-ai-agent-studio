@@ -11,6 +11,7 @@ setup(
         "pytest>=7.0.0",
         "pytest-asyncio>=0.18.0",
         "pytest-cov>=3.0.0",
+        "openai>=1.12.0",  # Required for async LLM provider interface
     ],
     extras_require={
         "dev": [
@@ -19,6 +20,11 @@ setup(
             "isort",
             "mypy",
         ]
+    },
+    entry_points={
+        'console_scripts': [
+            'near-swarm=near_swarm.core.cli:main',
+        ],
     },
     python_requires=">=3.8",
     author="Jarrod Barnes",
