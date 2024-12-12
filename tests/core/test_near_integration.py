@@ -66,16 +66,16 @@ async def test_wallet_validation():
             private_key=private_key
         )
 
-        # Test that we can get account balance
+        # Test that account exists first
+        account_exists = await connection.check_account(account_id)
+        assert account_exists, "Account does not exist on testnet"
+
+        # Then test that we can get account balance
         balance = await connection.get_account_balance()
         assert balance, "Failed to get account balance"
         assert "total" in balance, "Balance response missing total amount"
         assert "available" in balance, "Balance response missing available amount"
         assert float(balance["available"]) > 0, "Account has no available balance"
-
-        # Test that account exists
-        account_exists = await connection.check_account(account_id)
-        assert account_exists, "Account does not exist on testnet"
 
     except Exception as e:
         pytest.fail(f"Failed to validate wallet: {str(e)}") 

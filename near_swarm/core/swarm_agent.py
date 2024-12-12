@@ -148,15 +148,15 @@ class SwarmAgent(Agent):
                 raise RuntimeError(f"transaction_outcome rejected - Unsupported role: {self.swarm_config.role}")
 
             result = await self._evaluate_with_llm(proposal, role_prompt)
-
-            if not result.get("decision", False):
-                raise RuntimeError(f"transaction_outcome rejected - {result.get('reasoning', 'No reason provided')}")
-
             return result
 
         except Exception as e:
             if "transaction_outcome" not in str(e):
-                raise RuntimeError(f"transaction_outcome rejected - {str(e)}")
+                return {
+                    "decision": False,
+                    "confidence": 0.0,
+                    "reasoning": f"Error evaluating proposal: {str(e)}"
+                }
             raise
 
     async def _evaluate_with_llm(self, proposal: Dict[str, Any], role_prompt: str) -> Dict[str, Any]:
@@ -177,7 +177,12 @@ class SwarmAgent(Agent):
 
         except Exception as e:
             logger.error(f"LLM evaluation failed: {str(e)}")
-            raise RuntimeError(f"LLM evaluation failed: {str(e)}")
+            # Return failure response instead of raising error
+            return {
+                "decision": False,
+                "confidence": 0.0,
+                "reasoning": f"LLM evaluation failed: {str(e)}"
+            }
 
     def _generate_evaluation_prompt(self, proposal: Dict[str, Any], role_prompt: str) -> str:
         """Generate a prompt for LLM evaluation."""

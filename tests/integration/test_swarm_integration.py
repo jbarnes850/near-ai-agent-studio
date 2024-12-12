@@ -19,7 +19,8 @@ def agent_config():
         llm_api_key="test_key",
         llm_model="meta-llama/Llama-3.3-70B-Instruct",
         llm_temperature=0.7,
-        llm_max_tokens=2000
+        llm_max_tokens=2000,
+        api_url="https://api.hyperbolic.ai/v1"
     )
 
 @pytest.mark.asyncio

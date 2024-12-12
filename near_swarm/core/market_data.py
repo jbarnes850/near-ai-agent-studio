@@ -61,6 +61,10 @@ class MarketDataManager:
         amount: float
     ) -> Dict:
         """Analyze market opportunities."""
+        # Validate amount
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+
         try:
             # Get market state
             market_state = await self._get_market_state(tokens)

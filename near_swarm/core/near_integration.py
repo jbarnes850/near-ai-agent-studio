@@ -154,15 +154,26 @@ class NEARConnection:
     async def get_account_balance(self) -> Dict[str, Any]:
         """Get account balance."""
         try:
-            account_data = self.provider.get_account(self.account_id)
+            balance_request = {
+                "jsonrpc": "2.0",
+                "id": "dontcare",
+                "method": "query",
+                "params": {
+                    "request_type": "view_account",
+                    "finality": "final",
+                    "account_id": self.account_id
+                }
+            }
+            response = requests.post(self.node_url, json=balance_request)
+            response.raise_for_status()
+            account_data = response.json()
             return {
-                "total": account_data["amount"],
-                "staked": account_data["locked"],
-                "available": str(int(account_data["amount"]) - int(account_data["locked"]))
+                "total": account_data["result"]["amount"],
+                "available": str(int(account_data["result"]["amount"]) - int(account_data["result"].get("locked", "0")))
             }
         except Exception as e:
             logger.error(f"Failed to get account balance: {str(e)}")
-            raise
+            raise NEARConnectionError(f"Failed to get account balance: {str(e)}")
 
     def send_transaction(self, receiver_id: str, amount: float) -> Dict[str, Any]:
         """Send a NEAR transaction."""
@@ -177,7 +188,7 @@ class NEARConnection:
                 return result
             except TransactionError as tx_error:
                 logger.error(f"Failed to send transaction: {str(tx_error)}")
-                raise NEARConnectionError(f"Failed to send transaction: {str(tx_error)}")
+                raise NEARConnectionError(f"Failed to send transaction: {tx_error}")
             except Exception as e:
                 logger.error(f"Unexpected error in send_transaction: {str(e)}")
                 raise NEARConnectionError(f"Unexpected error in send_transaction: {str(e)}")

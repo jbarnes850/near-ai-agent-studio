@@ -110,13 +110,14 @@ async def test_run_simple_strategy(env_setup):
         # Mock KeyPair setup with proper constructor behavior
         class MockKeyPair:
             def __init__(self, *args, **kwargs):
-                self._secret_key = "mock_secret_key"
+                # Create a 32-byte mock private key as per NEAR spec
+                self._secret_key = b'1' * 32  # 32 bytes of "1"
                 print(f"MockKeyPair initialized with args: {args}, kwargs: {kwargs}")
 
             @property
             def secret_key(self):
                 print("Accessing secret_key property")
-                return f"ed25519:{self._secret_key}"
+                return self._secret_key  # Return the 32-byte key directly
 
             def public_key(self):
                 return "ed25519:mock_public_key"
@@ -337,6 +338,12 @@ async def test_run_simple_strategy(env_setup):
                     }
 
                 near_connection.send_tokens = mock_send_tokens
+
+                # Add send_transaction that uses send_tokens
+                async def send_transaction(receiver_id, amount):
+                    return await near_connection.send_tokens(receiver_id, amount)
+
+                near_connection.send_transaction = send_transaction
 
                 # Run simple strategy with our pre-configured connection
                 try:

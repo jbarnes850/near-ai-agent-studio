@@ -103,20 +103,18 @@ async def test_llm_evaluation(agent_config, swarm_config):
             "proposer": "test.testnet"
         }
 
-        # Test evaluation
-        result = await agent.evaluate_proposal(proposal)
-        assert result["decision"] == True
-        assert result["confidence"] == 0.85
-        assert "Test reasoning" in result["reasoning"]
+        # Test evaluation using async context manager
+        async with agent as active_agent:
+            result = await active_agent.evaluate_proposal(proposal)
+            assert result["decision"] == True
+            assert result["confidence"] == 0.85
+            assert "Test reasoning" in result["reasoning"]
 
-        # Verify LLM was called with correct role
-        mock_query.assert_called_once()
-        call_args = mock_query.call_args[0][0]
-        assert swarm_config.role in call_args
-        assert "market_trade" in call_args
-
-        # Cleanup
-        await agent.close()
+            # Verify LLM was called with correct role
+            mock_query.assert_called_once()
+            call_args = mock_query.call_args[0][0]
+            assert swarm_config.role in call_args
+            assert "market_trade" in call_args
 
 
 @pytest.mark.asyncio
@@ -142,11 +140,9 @@ async def test_llm_evaluation_error_handling(agent_config, swarm_config):
             "proposer": "test.testnet"
         }
 
-        # Test evaluation with error
-        result = await agent.evaluate_proposal(proposal)
-        assert result["decision"] == False
-        assert result["confidence"] == 0.0
-        assert "LLM API error" in result["reasoning"]
-
-        # Cleanup
-        await agent.close()
+        # Test evaluation with error using async context manager
+        async with agent as active_agent:
+            result = await active_agent.evaluate_proposal(proposal)
+            assert result["decision"] == False
+            assert result["confidence"] == 0.0
+            assert "LLM API error" in result["reasoning"]

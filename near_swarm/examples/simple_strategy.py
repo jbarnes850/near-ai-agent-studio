@@ -39,7 +39,7 @@ async def run_simple_strategy(near_connection: Optional[NEARConnection] = None) 
         try:
             logger.debug("Attempting to access private key from key pair")
             # Access private key and encode it properly
-            private_key_bytes = near_connection.signer.key_pair._secret_key.to_bytes()
+            private_key_bytes = near_connection.signer.key_pair._secret_key  # Already in bytes
             private_key = f"ed25519:{base58.b58encode(private_key_bytes).decode('utf-8')}"
             logger.debug(f"Successfully accessed private key: {private_key[:16]}...")
         except AttributeError as e:

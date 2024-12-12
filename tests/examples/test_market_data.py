@@ -14,13 +14,13 @@ class MockResponse:
     """Mock aiohttp response."""
     def __init__(self, data):
         self.data = data
-    
+
     async def json(self):
         return self.data
-    
+
     async def __aenter__(self):
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
 
@@ -29,14 +29,14 @@ class MockResponse:
 async def mock_session():
     """Create a mock aiohttp session."""
     session = AsyncMock()
-    
+
     # Mock price response
     session.get.return_value = MockResponse({
         "near": {"usd": 3.50},
         "usdc": {"usd": 1.00},
         "eth": {"usd": 3000.00}
     })
-    
+
     return session
 
 
@@ -56,11 +56,11 @@ async def test_token_price(market_data):
     # Test getting NEAR price
     price = await market_data.get_token_price("NEAR", "USD")
     assert price == 3.50
-    
+
     # Test getting USDC price
     price = await market_data.get_token_price("USDC", "USD")
     assert price == 1.00
-    
+
     # Test getting ETH price
     price = await market_data.get_token_price("ETH", "USD")
     assert price == 3000.00
@@ -74,7 +74,7 @@ async def test_market_opportunity_analysis(market_data):
         tokens=["NEAR", "USDC", "ETH"],
         amount=1000.0
     )
-    
+
     assert "timestamp" in analysis
     assert "opportunities" in analysis
     assert "market_state" in analysis
@@ -88,7 +88,7 @@ async def test_market_state(market_data):
     state = await market_data._get_market_state(
         tokens=["NEAR", "USDC"]
     )
-    
+
     assert "timestamp" in state
     assert "prices" in state
     assert "volumes" in state
@@ -103,7 +103,7 @@ async def test_trading_volumes(market_data):
     volumes = await market_data._get_trading_volumes(
         tokens=["NEAR", "USDC"]
     )
-    
+
     assert "NEAR" in volumes
     assert "USDC" in volumes
     assert all(isinstance(v, float) for v in volumes.values())
@@ -116,7 +116,7 @@ async def test_liquidity_data(market_data):
     liquidity = await market_data._get_liquidity_data(
         tokens=["NEAR", "USDC"]
     )
-    
+
     assert "NEAR" in liquidity
     assert "USDC" in liquidity
     assert all(
@@ -150,13 +150,13 @@ async def test_opportunity_finding(market_data):
             }
         }
     }
-    
+
     # Find opportunities
     opportunities = await market_data._find_opportunities(
         market_state,
         amount=1000.0
     )
-    
+
     assert isinstance(opportunities, list)
     assert all(
         "token" in opp and "type" in opp and "price" in opp
@@ -176,7 +176,7 @@ async def test_profit_estimation(market_data):
             "available_liquidity": 500000.0
         }
     )
-    
+
     assert isinstance(profit, float)
     assert profit >= 0
 
@@ -187,12 +187,12 @@ async def test_error_handling(market_data):
     # Test invalid token
     with pytest.raises(Exception):
         await market_data.get_token_price("INVALID_TOKEN")
-    
+
     # Test invalid amount
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):  # Specify the exact exception we expect
         await market_data.analyze_market_opportunity(
             tokens=["NEAR"],
-            amount=-1000.0
+            amount=-1000.0  # Invalid negative amount should raise ValueError
         )
 
 
