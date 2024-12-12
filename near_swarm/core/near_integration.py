@@ -6,11 +6,12 @@ Handles core NEAR blockchain interactions
 import json
 import logging
 from typing import Optional, Dict, Any
+import base58
 
 import requests
 from near_api.providers import JsonProvider
 from near_api.signer import Signer, KeyPair
-from near_api.account import Account
+from near_api.account import Account, TransactionError
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,10 @@ class NEARConnection:
             elif network == "mainnet":
                 self.node_url = "https://rpc.mainnet.near.org"
             else:
-                self.node_url = "https://rpc.testnet.near.org"
+                self.node_url = "https://rpc.testnet.fastnear.com"
+
+            # Initialize provider
+            self.provider = JsonProvider(self.node_url)
 
             # Test connection with a status check
             try:
@@ -62,16 +66,29 @@ class NEARConnection:
                 logger.error(f"RPC connection test failed: {str(e)}")
                 raise
 
-            # Initialize provider
-            self.provider = JsonProvider(self.node_url)
-
             # Initialize key pair and signer
-            if private_key.startswith("ed25519:"):
-                private_key = private_key[8:]  # Remove ed25519: prefix
-            key_pair = KeyPair(private_key)  # Use constructor directly
-            self.signer = Signer(account_id, key_pair)
+            try:
+                # Handle private key initialization
+                key_str = private_key.strip()
+                try:
+                    # Initialize Account first
+                    key_pair = KeyPair(key_str)
+                    self.signer = Signer(account_id, key_pair)
+                    self.account = Account(
+                        self.provider,
+                        self.signer,
+                        self.account_id
+                    )
+                    logger.info("Successfully initialized key pair and signer")
+                except Exception as e:
+                    logger.error(f"Failed to initialize key pair: {str(e)}")
+                    raise NEARConnectionError(f"Failed to initialize key pair: {str(e)}")
 
-            # Initialize account with proper parameters
+            except Exception as e:
+                logger.error(f"Failed to initialize key pair: {str(e)}")
+                raise NEARConnectionError(f"Failed to initialize key pair: {str(e)}")
+
+            # Now check account data after Account is initialized
             account_request = {
                 "jsonrpc": "2.0",
                 "id": "dontcare",
@@ -94,24 +111,66 @@ class NEARConnection:
                 logger.error(f"Failed to retrieve account data: {str(e)}")
                 raise
 
-            self.account = Account(
-                self.provider,
-                self.signer,
-                self.account_id
-            )
             logger.info(f"Successfully initialized NEAR connection for {account_id}")
 
         except Exception as e:
             logger.error(f"Failed to initialize NEAR connection: {str(e)}")
             raise NEARConnectionError(f"NEAR connection failed: {str(e)}")
 
-    async def check_account(self, account_id: str) -> bool:
-        """Check if an account exists."""
+    async def check_account(self, account_id: str) -> None:
+        """Check if the account exists and initialize it if needed."""
         try:
-            account_data = self.provider.get_account(account_id)
-            return bool(account_data)
-        except Exception:
-            return False
+            # Get account details
+            account_info = await self.account.state()
+            logger.debug(f"Account info: {account_info}")
+
+            # Format the public key
+            public_key = self.signer.key_pair.public_key
+            public_key_str = f"ed25519:{base58.b58encode(public_key).decode('utf-8')}"
+
+            # Use near CLI to add the access key
+            import subprocess
+            import os
+            import json
+
+            # Create a temporary file to store the key
+            key_file = "/tmp/near_key.json"
+            key_data = {
+                "account_id": self.account_id,
+                "public_key": public_key_str,
+                "private_key": f"ed25519:{base58.b58encode(self.signer.key_pair._secret_key.to_bytes()).decode('utf-8')}"
+            }
+
+            with open(key_file, 'w') as f:
+                json.dump(key_data, f)
+
+            try:
+                # Add the key using near CLI
+                result = subprocess.run(
+                    [
+                        "near", "add-key",
+                        self.account_id,
+                        public_key_str,
+                        "--networkId", self.network,
+                        "--keyPath", key_file
+                    ],
+                    capture_output=True,
+                    text=True
+                )
+
+                if result.returncode != 0:
+                    logger.warning(f"Failed to add key: {result.stderr}")
+                else:
+                    logger.info("Access key added successfully")
+            finally:
+                # Clean up the temporary file
+                if os.path.exists(key_file):
+                    os.remove(key_file)
+
+            logger.info(f"Successfully initialized NEAR connection for {account_id}")
+        except Exception as e:
+            logger.error(f"Failed to check account: {str(e)}")
+            raise NEARConnectionError(f"Failed to check account: {str(e)}")
 
     async def get_account_balance(self) -> Dict[str, Any]:
         """Get account balance."""
@@ -126,39 +185,24 @@ class NEARConnection:
             logger.error(f"Failed to get account balance: {str(e)}")
             raise
 
-    async def send_transaction(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
-        """Send a transaction to the NEAR network."""
+    def send_transaction(self, receiver_id: str, amount: float) -> Dict[str, Any]:
+        """Send a NEAR transaction."""
         try:
-            # Validate transaction
-            if not transaction.get("receiver_id"):
-                raise ValueError("Missing receiver_id in transaction")
-            if not transaction.get("actions"):
-                raise ValueError("Missing actions in transaction")
+            # Convert amount to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
+            amount_yocto = int(amount * 10**24)
 
-            # Handle transfer action
-            if len(transaction["actions"]) == 1 and "Transfer" in transaction["actions"][0]:
-                transfer_data = transaction["actions"][0]["Transfer"]
-                amount = int(transfer_data["deposit"])
-                try:
-                    result = await self.account.send_money(
-                        transaction["receiver_id"],
-                        amount
-                    )
-                    # Handle different response formats
-                    if isinstance(result, dict):
-                        if "transaction_outcome" in result:
-                            return result
-                        elif "result" in result and "transaction_outcome" in result["result"]:
-                            return result["result"]
-                        else:
-                            logger.warning("Unexpected transaction response format")
-                            return {"result": result}  # Wrap raw response
-                    return {"result": result}  # Wrap raw response
-                except Exception as e:
-                    logger.error(f"Transaction failed: {str(e)}")
-                    raise
-            else:
-                raise ValueError("Only Transfer actions are currently supported")
+            # Use the account's send_money method which handles all transaction details
+            try:
+                result = self.account.send_money(receiver_id, amount_yocto)
+                logger.info(f"Transaction sent successfully: {result}")
+                return result
+            except TransactionError as tx_error:
+                logger.error(f"Failed to send transaction: {str(tx_error)}")
+                raise NEARConnectionError(f"Failed to send transaction: {str(tx_error)}")
+            except Exception as e:
+                logger.error(f"Unexpected error in send_transaction: {str(e)}")
+                raise NEARConnectionError(f"Unexpected error in send_transaction: {str(e)}")
+
         except Exception as e:
-            logger.error(f"Failed to send transaction: {str(e)}")
-            raise
+            logger.error(f"Transaction failed: {str(e)}")
+            raise NEARConnectionError(f"Failed to send transaction: {str(e)}")

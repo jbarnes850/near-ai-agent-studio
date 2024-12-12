@@ -66,7 +66,7 @@ async def test_setup():
         # Test RPC connection
         logger.info('Testing NEAR RPC connection...')
         response = requests.post(
-            'https://rpc.testnet.near.org',
+            'https://rpc.testnet.fastnear.com',
             json={
                 'jsonrpc': '2.0',
                 'id': 'dontcare',
@@ -77,23 +77,23 @@ async def test_setup():
         response.raise_for_status()
         status = response.json()
         logger.info(f'✅ NEAR RPC connection successful - Chain ID: {status.get(\"result\", {}).get(\"chain_id\")}')
-        
+
         # Test market data
         logger.info('Testing market data integration...')
         market = MarketDataManager()
         logger.info('✅ Market data initialized')
-        
+
         # Test memory system
         logger.info('Testing memory system...')
         memory = MemoryManager()
         logger.info('✅ Memory system initialized')
-        
+
         # Check NEAR credentials
         if not os.getenv('NEAR_ACCOUNT_ID') or not os.getenv('NEAR_PRIVATE_KEY'):
             logger.warning('⚠️  NEAR credentials not found - please set NEAR_ACCOUNT_ID and NEAR_PRIVATE_KEY in .env')
         else:
             logger.info(f'✅ NEAR credentials found for account: {os.getenv(\"NEAR_ACCOUNT_ID\")}')
-            
+
     except Exception as e:
         logger.error(f'Error during setup: {str(e)}')
         raise

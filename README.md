@@ -77,7 +77,7 @@ graph TB
         Agent1[Market Analyzer]
         Agent2[Risk Manager]
         Agent3[Strategy Optimizer]
-        
+
         style Agent1 fill:black,stroke:#00C1DE,stroke-width:2px,color:white
         style Agent2 fill:black,stroke:#00C1DE,stroke-width:2px,color:white
         style Agent3 fill:black,stroke:#00C1DE,stroke-width:2px,color:white
@@ -92,7 +92,7 @@ graph TB
     NEAR_Int <--> NEAR
     LLM_Int <--> LLM
     Mem <--> Storage
-    
+
     %% Swarm Connections
     Agent1 <--> Agent2
     Agent2 <--> Agent3
@@ -140,7 +140,7 @@ near-swarm-intelligence/
 ## Example: Creating Your First Agent
 
 ```python
-from near_swarm.core.agent import NEARAgent, AgentConfig
+from near_swarm.core.agent import Agent, AgentConfig
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 
 # Configure your agent
@@ -153,7 +153,7 @@ config = AgentConfig(
 )
 
 # Create and start agent
-agent = NEARAgent(config)
+agent = Agent(config)
 await agent.start()
 
 # Execute actions

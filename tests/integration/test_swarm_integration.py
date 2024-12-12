@@ -62,19 +62,24 @@ async def test_swarm_consensus(agent_config):
             "proposer": agent_config.account_id
         }
 
-        # Get consensus
-        result = await market_analyzer.propose_action(
-            action_type=proposal["type"],
-            params=proposal["params"]
-        )
+        # Use agents within context managers
+        async with market_analyzer as active_analyzer, \
+                  risk_manager as active_risk_manager, \
+                  strategy_optimizer as active_optimizer:
 
-        # Verify consensus
-        assert result["consensus"] == True
-        assert result["approval_rate"] >= 0.7
-        assert len(result["reasons"]) == 2  # Two peer agents
+            # Get consensus
+            result = await active_analyzer.propose_action(
+                action_type=proposal["type"],
+                params=proposal["params"]
+            )
 
-        # Verify LLM was queried for each agent
-        assert mock_query.call_count == 2  # Two peer evaluations
+            # Verify consensus
+            assert result["consensus"] == True
+            assert result["approval_rate"] >= 0.7
+            assert len(result["reasons"]) == 2  # Two peer agents
+
+            # Verify LLM was queried for each agent
+            assert mock_query.call_count == 2  # Two peer evaluations
 
         # Cleanup
         await market_analyzer.close()
@@ -107,15 +112,16 @@ async def test_swarm_transaction_execution(agent_config):
         }
 
         # Evaluate proposal
-        result = await agent.evaluate_proposal(proposal)
+        async with agent as active_agent:
+            result = await active_agent.evaluate_proposal(proposal)
 
-        # Verify evaluation
-        assert result["decision"] == True
-        assert result["confidence"] >= 0.7
-        assert "reasoning" in result
+            # Verify evaluation
+            assert result["decision"] == True
+            assert result["confidence"] >= 0.7
+            assert "reasoning" in result
 
-        # Verify LLM was queried
-        assert mock_query.called
+            # Verify LLM was queried
+            assert mock_query.called
 
         # Cleanup
         await agent.close()

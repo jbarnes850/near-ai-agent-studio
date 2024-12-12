@@ -3,122 +3,126 @@ Simple Strategy Example
 Demonstrates basic swarm intelligence with LLM-powered decision making
 """
 
-import asyncio
 import logging
-from typing import List, Dict, Any
+import os
+import base58
+from typing import Dict, Any, Optional
 
-from near_swarm.core.agent import AgentConfig
+from near_swarm.core.agent import Agent
+from near_swarm.core.config import AgentConfig
+from near_swarm.core.near_integration import NEARConnection, NEARConnectionError
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
-from near_swarm.core.config import load_config
-from near_swarm.core.near_integration import NEARConnection
 
 logger = logging.getLogger(__name__)
 
-async def run_simple_strategy():
-    """Run a simple strategy demonstrating swarm intelligence."""
-    agents = []
-    agent = None
+async def run_simple_strategy(near_connection: Optional[NEARConnection] = None) -> Dict[str, Any]:
+    """Run a simple strategy example that demonstrates swarm intelligence with LLM-powered decision making."""
     try:
-        # Initialize agents with different roles using environment config
-        config = load_config()
+        logger.info("Initializing simple strategy...")
 
-        # Initialize NEAR connection first
-        near = NEARConnection(
-            network=config.network,
-            account_id=config.account_id,
-            private_key=config.private_key
+        # Initialize NEAR connection if not provided
+        if not near_connection:
+            network = os.getenv("NEAR_NETWORK", "testnet")
+            account_id = os.getenv("NEAR_ACCOUNT_ID")
+            private_key = os.getenv("NEAR_PRIVATE_KEY")
+
+            if not all([network, account_id, private_key]):
+                raise RuntimeError("Missing required environment variables: NEAR_NETWORK, NEAR_ACCOUNT_ID, NEAR_PRIVATE_KEY")
+
+            near_connection = NEARConnection(
+                network=network,
+                account_id=account_id,
+                private_key=private_key
+            )
+
+        # Create agent configuration
+        try:
+            logger.debug("Attempting to access private key from key pair")
+            # Access private key and encode it properly
+            private_key_bytes = near_connection.signer.key_pair._secret_key.to_bytes()
+            private_key = f"ed25519:{base58.b58encode(private_key_bytes).decode('utf-8')}"
+            logger.debug(f"Successfully accessed private key: {private_key[:16]}...")
+        except AttributeError as e:
+            logger.error(f"Failed to access private key: {str(e)}")
+            raise RuntimeError(f"Failed to access private key: {str(e)}")
+
+        config = AgentConfig(
+            network=near_connection.network,
+            account_id=near_connection.account_id,
+            private_key=private_key,
+            llm_provider=os.getenv("LLM_PROVIDER", "hyperbolic"),
+            llm_api_key=os.getenv("LLM_API_KEY"),
+            llm_model=os.getenv("LLM_MODEL", "meta-llama/Llama-3.3-70B-Instruct"),
+            llm_temperature=float(os.getenv("LLM_TEMPERATURE", "0.7")),
+            llm_max_tokens=int(os.getenv("LLM_MAX_TOKENS", "2000")),
+            api_url=os.getenv("HYPERBOLIC_API_URL")
         )
-        await near.check_account(config.account_id)
 
-        # Initialize agents with different roles
-        agent = SwarmAgent(
-            config,
-            SwarmConfig(role="market_analyzer", min_confidence=0.7)
+        # Initialize the agent with a specific role
+        agent = Agent(config=config)
+        swarm_config = SwarmConfig(
+            role="market_analyzer",
+            min_confidence=0.7,
+            min_votes=1,
+            timeout=1.0
         )
-        agents.append(agent)
 
-        risk_manager = SwarmAgent(
-            config,
-            SwarmConfig(role="risk_manager", min_confidence=0.8)
-        )
-        agents.append(risk_manager)
+        # Create and use SwarmAgent with async context manager
+        async with SwarmAgent(config=config, swarm_config=swarm_config) as swarm_agent:
+            # Example: Evaluate a test proposal for a transfer transaction
+            test_proposal = {
+                "type": "transfer",
+                "params": {
+                    "amount": 0.1,  # Amount in NEAR
+                    "recipient": "recipient-test.testnet",
+                    "reason": "Test transaction for demonstration"
+                },
+                "proposer": near_connection.account_id  # Add proposer field
+            }
 
-        strategy_optimizer = SwarmAgent(
-            config,
-            SwarmConfig(role="strategy_optimizer", min_confidence=0.75)
-        )
-        agents.append(strategy_optimizer)
-
-        # Create a test proposal
-        proposal = {
-            "type": "test_transaction",
-            "params": {
-                "action": "transfer",
-                "recipient": "bob.testnet",
-                "amount": "1",
-                "token": "NEAR"
-            },
-            "proposer": config.account_id
-        }
-
-        print("\n=== Running Simple Strategy Example ===")
-        print(f"Proposing transaction: {proposal}")
-
-        # Get consensus from all agents
-        decisions = []
-        for agent in agents:
-            decision = await agent.evaluate_proposal(proposal)
-            decisions.append(decision)
-
-        # Calculate consensus
-        total_votes = len([d for d in decisions if d["decision"]])
-        approval_rate = (total_votes / len(decisions)) * 100
-
-        print("\n=== Swarm Decision Analysis ===")
-        print(f"Consensus reached: {total_votes >= 2}")
-        print(f"Approval rate: {approval_rate:.2f}%")
-        print(f"Total votes: {total_votes}")
-
-        print("\nAgent Reasoning:\n")
-        for i, decision in enumerate(decisions, 1):
-            print(f"Agent {i}:")
-            print(decision.get("reasoning", "No reasoning provided"))
-            print()
-
-        if total_votes >= 2:
-            print("=== Executing Transaction ===")
+            # Get swarm decision
             try:
-                # Convert the proposal to NEAR transaction format
-                near_tx = {
-                    "receiver_id": proposal["params"]["recipient"],
-                    "actions": [{
-                        "Transfer": {
-                            "deposit": str(int(float(proposal["params"]["amount"]) * 10**24))  # Convert to yoctoNEAR
+                logger.info("Evaluating proposal with swarm agent...")
+                swarm_decision = await swarm_agent.evaluate_proposal(test_proposal)
+                logger.info(f"Swarm decision: {swarm_decision}")
+
+                # Check if proposal was approved
+                if swarm_decision.get("decision", False):
+                    logger.info("Proposal approved by swarm. Executing transaction...")
+                    try:
+                        # Execute the transaction
+                        result = await near_connection.send_transaction(
+                            receiver_id=test_proposal["params"]["recipient"],
+                            amount=test_proposal["params"]["amount"]
+                        )
+                        logger.info(f"Transaction executed successfully: {result}")
+                        return {
+                            "status": "success",
+                            "message": "Strategy executed successfully",
+                            "transaction": result,
+                            "swarm_decision": swarm_decision
                         }
-                    }]
-                }
-                result = await near.send_transaction(near_tx)
-
-                # Validate transaction result
-                if isinstance(result, dict):
-                    if "result" in result and "transaction_outcome" in result["result"]:
-                        print("Transaction executed successfully!")
-                        print(f"Transaction ID: {result['result']['transaction_outcome']['id']}")
-                    elif "transaction_outcome" in result:
-                        print("Transaction executed successfully!")
-                        print(f"Transaction ID: {result['transaction_outcome']['id']}")
-                    else:
-                        raise ValueError("Invalid transaction response format")
+                    except Exception as e:
+                        error_msg = f"Failed to execute transaction: {str(e)}"
+                        logger.error(error_msg)
+                        return {
+                            "status": "error",
+                            "message": error_msg,
+                            "swarm_decision": swarm_decision
+                        }
                 else:
-                    raise ValueError("Invalid transaction response type")
+                    message = f"Proposal rejected by swarm. Reason: {swarm_decision.get('reasoning', 'No reason provided')}"
+                    logger.info(message)
+                    return {
+                        "status": "rejected",
+                        "message": message,
+                        "swarm_decision": swarm_decision
+                    }
             except Exception as e:
-                logger.error(f"Failed to execute transaction: {str(e)}")
-                raise
+                error_msg = f"Error in swarm decision making: {str(e)}"
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
 
-    finally:
-        # Close all agent connections
-        for agent in agents:
-            await agent.close()
-
-if __name__ == "__main__":
-    asyncio.run(run_simple_strategy())
+    except Exception as e:
+        logger.error(f"Error in simple strategy: {str(e)}")
+        raise RuntimeError(f"Error in simple strategy: {str(e)}")

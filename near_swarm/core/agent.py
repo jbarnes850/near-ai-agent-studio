@@ -29,6 +29,7 @@ class AgentConfig:
     llm_temperature: float = 0.7
     llm_max_tokens: int = 2000
     node_url: Optional[str] = None
+    api_url: Optional[str] = None  # Added for Hyperbolic API support
     max_retries: int = 5
     retry_delay: float = 2.0
 
@@ -48,13 +49,15 @@ class AgentConfig:
             raise ValueError("llm_provider is required")
         if not self.llm_api_key:
             raise ValueError("llm_api_key is required")
+        if self.llm_provider.lower() == 'hyperbolic' and not self.api_url:
+            raise ValueError("api_url is required when using hyperbolic provider")
         if self.max_retries < 1:
             raise ValueError("max_retries must be at least 1")
         if self.retry_delay <= 0:
             raise ValueError("retry_delay must be positive")
 
 
-class NEARAgent:
+class Agent:
     """Base NEAR agent class."""
 
     def __init__(self, config: AgentConfig):

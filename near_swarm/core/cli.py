@@ -70,7 +70,7 @@ async def run_strategy():
         # Initialize configuration and NEAR connection
         config = load_config()
         near = NEARConnection(config)
-        await near.check_account()
+        await near.check_account(config.account_id)
 
         # Initialize your agents here
         agent = SwarmAgent(
@@ -102,9 +102,41 @@ if __name__ == "__main__":
 async def run_command(args):
     """Run a strategy."""
     try:
+        # Load configuration
+        config = load_config()
+
+        # Format private key properly
+        private_key = config.private_key
+        if private_key and not private_key.startswith('ed25519:'):
+            private_key = f'ed25519:{private_key}'
+
+        # Initialize NEAR connection and account
+        from near_swarm.core.near_integration import NEARConnection
+        near = NEARConnection(
+            network=config.network,
+            account_id=config.account_id,
+            private_key=private_key,
+            node_url="https://rpc.testnet.fastnear.com"
+        )
+
         if args.example:
             if args.example == "simple_strategy":
-                await run_simple_strategy()
+                logger.info("Running simple strategy example...")
+                try:
+                    result = await run_simple_strategy(near)
+                    logger.info("Simple strategy completed successfully")
+                    if isinstance(result, dict):
+                        logger.info("Swarm Decision Details:")
+                        if "swarm_decision" in result:
+                            decision = result["swarm_decision"]
+                            logger.info(f"Decision: {'Approved' if decision.get('decision') else 'Rejected'}")
+                            logger.info(f"Reasoning: {decision.get('reasoning', 'No reasoning provided')}")
+                            logger.info(f"Confidence: {decision.get('confidence', 'N/A')}")
+                        logger.info(f"Status: {result.get('status', 'unknown')}")
+                        logger.info(f"Message: {result.get('message', 'No message provided')}")
+                except Exception as e:
+                    logger.error(f"Failed to run simple strategy: {str(e)}")
+                    raise
             else:
                 logger.error(f"Unknown example strategy: {args.example}")
                 return
@@ -115,28 +147,11 @@ async def run_command(args):
                 logger.error(f"Config file not found: {config_path}")
                 return
 
-            with open(config_path) as f:
-                config = json.load(f)
-
-            # Get strategy directory from config path
-            strategy_dir = config_path.parent
-
-            # Run custom strategy
-            strategy_path = strategy_dir / f"{config['name']}.py"
-            if not strategy_path.exists():
-                logger.error(f"Strategy file not found: {strategy_path}")
-                return
-
-            # Import and run strategy
-            import importlib.util
-            spec = importlib.util.spec_from_file_location("strategy", strategy_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            await module.run_strategy()
+            # PLACEHOLDER: Custom strategy loading and execution code
 
     except Exception as e:
         logger.error(f"Error running strategy: {str(e)}")
-        raise RuntimeError(f"Strategy execution failed: {str(e)}")
+        raise
 
 async def create_agent_command(args):
     """Create a new agent with specified role."""
