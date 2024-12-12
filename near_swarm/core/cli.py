@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     except Exception as e:
         logger.error(f"Error initializing strategy: {str(e)}")
-        sys.exit(1)
+        raise RuntimeError(f"Strategy initialization failed: {str(e)}")
 
 async def run_command(args):
     """Run a strategy."""
@@ -136,7 +136,7 @@ async def run_command(args):
 
     except Exception as e:
         logger.error(f"Error running strategy: {str(e)}")
-        sys.exit(1)
+        raise RuntimeError(f"Strategy execution failed: {str(e)}")
 
 async def create_agent_command(args):
     """Create a new agent with specified role."""
@@ -154,7 +154,7 @@ async def create_agent_command(args):
         return agent
     except Exception as e:
         logger.error(f"Error creating agent: {str(e)}")
-        sys.exit(1)
+        raise RuntimeError(f"Agent creation failed: {str(e)}")
 
 async def interactive_mode(agent):
     """Run the agent in interactive mode."""
