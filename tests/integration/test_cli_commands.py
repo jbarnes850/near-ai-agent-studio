@@ -117,6 +117,7 @@ from near_swarm.core.config import load_config
 from near_swarm.core.near_integration import NEARConnection
 
 async def run_strategy():
+    agent = None
     try:
         # Initialize configuration and NEAR connection
         config = load_config()
@@ -137,7 +138,8 @@ async def run_strategy():
         pass
 
     finally:
-        await agent.close()
+        if agent:
+            await agent.close()
 
 if __name__ == "__main__":
     asyncio.run(run_strategy())

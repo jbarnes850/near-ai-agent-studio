@@ -29,9 +29,12 @@ def load_config() -> AgentConfig:
         sys.exit(1)
 
     return AgentConfig(
-        near_network=os.getenv('NEAR_NETWORK', 'testnet'),
+        network=os.getenv('NEAR_NETWORK', 'testnet'),
         account_id=os.getenv('NEAR_ACCOUNT_ID'),
         private_key=os.getenv('NEAR_PRIVATE_KEY'),
         llm_provider=os.getenv('LLM_PROVIDER'),
-        llm_api_key=os.getenv('LLM_API_KEY')
+        llm_api_key=os.getenv('LLM_API_KEY'),
+        llm_model=os.getenv('LLM_MODEL', 'meta-llama/Llama-3.3-70B-Instruct'),
+        llm_temperature=float(os.getenv('LLM_TEMPERATURE', '0.7')),
+        llm_max_tokens=int(os.getenv('LLM_MAX_TOKENS', '2000'))
     )

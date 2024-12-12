@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AgentConfig:
     """Agent configuration."""
-    near_network: str
+    network: str
     account_id: str
     private_key: str
     llm_provider: str
@@ -34,10 +34,10 @@ class AgentConfig:
 
     def __post_init__(self):
         """Validate configuration."""
-        if not self.near_network:
-            raise ValueError("near_network is required")
-        if self.near_network not in ["mainnet", "testnet"]:
-            raise ValueError("near_network must be 'mainnet' or 'testnet'")
+        if not self.network:
+            raise ValueError("network is required")
+        if self.network not in ["mainnet", "testnet"]:
+            raise ValueError("network must be 'mainnet' or 'testnet'")
         if not self.account_id:
             raise ValueError("account_id is required")
         if "@" in self.account_id:
@@ -66,7 +66,7 @@ class NEARAgent:
     def _initialize_near_connection(self):
         """Initialize NEAR connection."""
         self.near_connection = NEARConnection(
-            network=self.config.near_network,
+            network=self.config.network,
             account_id=self.config.account_id,
             private_key=self.config.private_key,
             node_url=self.config.node_url

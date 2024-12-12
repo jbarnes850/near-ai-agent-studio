@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 async def run_simple_strategy():
     """Run a simple strategy demonstrating swarm intelligence."""
     agents = []
+    agent = None
     try:
         # Initialize agents with different roles using environment config
         config = load_config()
@@ -29,11 +30,12 @@ async def run_simple_strategy():
         )
         await near.check_account(config.account_id)
 
-        market_analyzer = SwarmAgent(
+        # Initialize agents with different roles
+        agent = SwarmAgent(
             config,
             SwarmConfig(role="market_analyzer", min_confidence=0.7)
         )
-        agents.append(market_analyzer)
+        agents.append(agent)
 
         risk_manager = SwarmAgent(
             config,
