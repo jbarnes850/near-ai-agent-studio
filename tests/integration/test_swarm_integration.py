@@ -12,7 +12,7 @@ from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 def agent_config():
     """Create test agent configuration."""
     return AgentConfig(
-        near_network="testnet",
+        network="testnet",
         account_id="test.testnet",
         private_key="ed25519:3D4YudUQRE39Lc4JHghuB5WM8kbgDDa34mnrEP5DdTApVH81af3e7MvFrog1CMNn67PCQmNkxQLPoacMuZydf2hL",
         llm_provider="hyperbolic",

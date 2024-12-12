@@ -54,6 +54,9 @@ class NEARConnection:
                 }
                 response = requests.post(self.node_url, json=status_request)
                 response.raise_for_status()
+                status_data = response.json()
+                if not isinstance(status_data, dict) or 'result' not in status_data:
+                    raise ValueError("Invalid response format from RPC endpoint")
                 logger.info("RPC connection test successful")
             except Exception as e:
                 logger.error(f"RPC connection test failed: {str(e)}")
@@ -84,7 +87,9 @@ class NEARConnection:
                 response = requests.post(self.node_url, json=account_request)
                 response.raise_for_status()
                 account_data = response.json()
-                logger.info(f"Account data retrieved: {json.dumps(account_data, indent=2)}")
+                if not isinstance(account_data, dict) or 'result' not in account_data:
+                    raise ValueError("Invalid account data format from RPC endpoint")
+                logger.info("Account data retrieved successfully")
             except Exception as e:
                 logger.error(f"Failed to retrieve account data: {str(e)}")
                 raise
@@ -130,12 +135,30 @@ class NEARConnection:
             if not transaction.get("actions"):
                 raise ValueError("Missing actions in transaction")
 
-            # Send transaction
-            result = await self.account.sign_and_send_transaction(
-                transaction["receiver_id"],
-                transaction["actions"]
-            )
-            return result
+            # Handle transfer action
+            if len(transaction["actions"]) == 1 and "Transfer" in transaction["actions"][0]:
+                transfer_data = transaction["actions"][0]["Transfer"]
+                amount = int(transfer_data["deposit"])
+                try:
+                    result = await self.account.send_money(
+                        transaction["receiver_id"],
+                        amount
+                    )
+                    # Handle different response formats
+                    if isinstance(result, dict):
+                        if "transaction_outcome" in result:
+                            return result
+                        elif "result" in result and "transaction_outcome" in result["result"]:
+                            return result["result"]
+                        else:
+                            logger.warning("Unexpected transaction response format")
+                            return result
+                    return result
+                except Exception as e:
+                    logger.error(f"Transaction failed: {str(e)}")
+                    raise
+            else:
+                raise ValueError("Only Transfer actions are currently supported")
         except Exception as e:
             logger.error(f"Failed to send transaction: {str(e)}")
             raise

@@ -4,10 +4,10 @@ Integration tests for NEAR Swarm Intelligence CLI commands
 
 import os
 import json
+import argparse
 import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
-import argparse
+from unittest.mock import AsyncMock, patch, MagicMock
 
 from near_swarm.core.cli import main, init_command, run_command, create_agent_command
 from near_swarm.core.agent import AgentConfig
@@ -24,7 +24,8 @@ def env_setup():
         'LLM_API_KEY': 'test_key',
         'LLM_MODEL': 'meta-llama/Llama-3.3-70B-Instruct',
         'LLM_TEMPERATURE': '0.7',
-        'LLM_MAX_TOKENS': '2000'
+        'LLM_MAX_TOKENS': '2000',
+        'HYPERBOLIC_API_URL': 'https://api.hyperbolic.ai/v1'
     })
     yield
     for key in os.environ:
@@ -73,92 +74,259 @@ async def test_create_agent_command(env_setup):
 async def test_run_simple_strategy(env_setup):
     """Test running simple strategy example."""
     with patch('sys.argv', ['near-swarm', 'run', '--example', 'simple_strategy']), \
-         patch('near_swarm.core.near_integration.NEARConnection') as mock_connection, \
-         patch('near_swarm.core.llm_provider.HyperbolicProvider.query', new_callable=AsyncMock) as mock_query:
+         patch('near_api.signer.KeyPair') as mock_keypair_class, \
+         patch('near_api.signer.Signer') as mock_signer_class, \
+         patch('near_swarm.core.llm_provider.HyperbolicProvider.query', new_callable=AsyncMock) as mock_query, \
+         patch('near_api.providers.JsonProvider', new_callable=AsyncMock) as mock_provider_class, \
+         patch('requests.post') as mock_requests_post:
 
-        mock_connection.return_value.check_account = AsyncMock(return_value=True)
-        mock_query.return_value = '{"decision": true, "confidence": 0.85, "reasoning": "Test reasoning"}'
+        # Mock requests.post responses
+        def mock_post_response(*args, **kwargs):
+            # Parse the request data
+            request_data = kwargs.get('json', {})
+            method = request_data.get('method', '')
+            params = request_data.get('params', {})
 
-        # Run simple strategy directly
-        await run_command(argparse.Namespace(
-            command='run',
-            example='simple_strategy',
-            config=None
-        ))
+            response_data = {
+                "jsonrpc": "2.0",
+                "id": "dontcare",
+                "result": {}
+            }
 
-        # Verify LLM was queried
-        assert mock_query.called
+            if method == 'status':
+                response_data["result"] = {
+                    "chain_id": "testnet",
+                    "latest_protocol_version": 61,
+                    "node_key": "ed25519:mock_node_key",
+                    "sync_info": {
+                        "latest_block_hash": "mock_hash",
+                        "latest_block_height": 1234567,
+                        "syncing": False
+                    }
+                }
+            elif method == 'query':
+                request_type = params.get('request_type', '')
+                if request_type == 'view_account':
+                    response_data["result"] = {
+                        "amount": "100000000000000000000000000",
+                        "locked": "0",
+                        "code_hash": "11111111111111111111111111111111",
+                        "storage_usage": 182,
+                        "storage_paid_at": 0,
+                        "block_height": 1234567,
+                        "block_hash": "11111111111111111111111111111111"
+                    }
+                elif request_type == 'view_access_key':
+                    response_data["result"] = {
+                        "nonce": 0,
+                        "permission": "FullAccess",
+                        "block_height": 1234567,
+                        "block_hash": "11111111111111111111111111111111"
+                    }
 
-        # Verify connection was checked
-        assert mock_connection.return_value.check_account.called
+            class MockResponse:
+                def __init__(self, json_data, status_code=200):
+                    self.json_data = json_data
+                    self.status_code = status_code
+                    self.content = json.dumps(json_data).encode('utf-8')
 
-@pytest.mark.asyncio
-async def test_run_custom_strategy(env_setup, tmp_path):
-    """Test running a custom strategy."""
-    # First create a test strategy
-    strategy_dir = tmp_path / 'test_strategy'
-    strategy_dir.mkdir()
+                def json(self):
+                    return self.json_data
 
-    config = {
-        "name": "test_strategy",
-        "roles": ["market_analyzer", "risk_manager"],
-        "min_confidence": 0.7,
-        "min_votes": 2
-    }
+                def raise_for_status(self):
+                    pass
 
-    with open(strategy_dir / 'config.json', 'w') as f:
-        json.dump(config, f)
+            return MockResponse(response_data)
 
-    strategy_code = """
-import asyncio
-from near_swarm.core.agent import AgentConfig
-from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
-from near_swarm.core.config import load_config
-from near_swarm.core.near_integration import NEARConnection
+        mock_requests_post.side_effect = mock_post_response
 
-async def run_strategy():
-    agent = None
-    try:
-        # Initialize configuration and NEAR connection
-        config = load_config()
-        near = NEARConnection(
-            network=config.network,
-            account_id=config.account_id,
-            private_key=config.private_key
-        )
-        await near.check_account(config.account_id)
+        # Mock KeyPair setup
+        mock_keypair = MagicMock()
+        mock_keypair_class.return_value = mock_keypair
 
-        # Initialize agent
-        agent = SwarmAgent(
-            config,
-            SwarmConfig(role="market_analyzer", min_confidence=0.7)
-        )
+        # Mock provider setup
+        mock_provider = MagicMock()
+        mock_provider.rpc_addr = MagicMock(return_value="https://rpc.testnet.near.org")
 
-        # Add strategy logic here
-        pass
+        def json_rpc(method, params, timeout=2):
+            response_data = {
+                "jsonrpc": "2.0",
+                "id": "dontcare",
+                "result": {}
+            }
 
-    finally:
-        if agent:
-            await agent.close()
+            if method == 'query':
+                if params.get('request_type') == 'view_account':
+                    response_data["result"] = {
+                        "amount": "100000000000000000000000000",
+                        "locked": "0",
+                        "code_hash": "11111111111111111111111111111111",
+                        "storage_usage": 182,
+                        "storage_paid_at": 0,
+                        "block_height": 1234567,
+                        "block_hash": "11111111111111111111111111111111"
+                    }
+                elif params.get('request_type') == 'view_access_key':
+                    response_data["result"] = {
+                        "nonce": 0,
+                        "permission": "FullAccess",
+                        "block_height": 1234567,
+                        "block_hash": "11111111111111111111111111111111"
+                    }
+            elif method == 'broadcast_tx_commit':
+                response_data["result"] = {
+                    "transaction_outcome": {
+                        "block_hash": "mock_block_hash",
+                        "id": "mock_tx_id",
+                        "outcome": {
+                            "executor_id": "test.testnet",
+                            "gas_burnt": 2427979026088,
+                            "logs": [],
+                            "receipt_ids": ["mock_receipt_id"],
+                            "status": {"SuccessValue": ""},
+                            "tokens_burnt": "242797902608800000000"
+                        },
+                        "proof": []
+                    },
+                    "receipts_outcome": [{
+                        "block_hash": "mock_block_hash",
+                        "id": "mock_receipt_id",
+                        "outcome": {
+                            "executor_id": "bob.testnet",
+                            "gas_burnt": 223182562500,
+                            "logs": [],
+                            "receipt_ids": [],
+                            "status": {"SuccessValue": ""},
+                            "tokens_burnt": "22318256250000000000"
+                        },
+                        "proof": []
+                    }],
+                    "status": {
+                        "SuccessValue": ""
+                    },
+                    "transaction": {
+                        "hash": "mock_hash",
+                        "signer_id": "test.testnet",
+                        "public_key": "ed25519:mock_key",
+                        "nonce": 1,
+                        "receiver_id": "receiver.testnet",
+                        "actions": [{"Transfer": {"deposit": "1000000000000000000000000"}}]
+                    }
+                }
+            return response_data
 
-if __name__ == "__main__":
-    asyncio.run(run_strategy())
-"""
+        mock_provider.json_rpc = MagicMock(side_effect=json_rpc)
 
-    with open(strategy_dir / 'test_strategy.py', 'w') as f:
-        f.write(strategy_code)
+        async def send_tx_and_wait(tx_hash, timeout=None):
+            return {
+                "transaction_outcome": {
+                    "block_hash": "mock_block_hash",
+                    "id": "mock_tx_id",
+                    "outcome": {
+                        "executor_id": "test.testnet",
+                        "gas_burnt": 2427979026088,
+                        "logs": [],
+                        "receipt_ids": ["mock_receipt_id"],
+                        "status": {"SuccessValue": ""},
+                        "tokens_burnt": "242797902608800000000"
+                    },
+                    "proof": []
+                },
+                "receipts_outcome": [{
+                    "block_hash": "mock_block_hash",
+                    "id": "mock_receipt_id",
+                    "outcome": {
+                        "executor_id": "bob.testnet",
+                        "gas_burnt": 223182562500,
+                        "logs": [],
+                        "receipt_ids": [],
+                        "status": {"SuccessValue": ""},
+                        "tokens_burnt": "22318256250000000000"
+                    },
+                    "proof": []
+                }]
+            }
 
-    with patch('sys.argv', ['near-swarm', 'run', '--config', str(strategy_dir / 'config.json')]), \
-         patch('near_swarm.core.near_integration.NEARConnection') as mock_connection:
+        mock_provider.send_tx_and_wait = AsyncMock(side_effect=send_tx_and_wait)
 
-        mock_connection.return_value.check_account = AsyncMock(return_value=True)
+        def get_account(account_id):
+            return {
+                "amount": "100000000000000000000000000",
+                "locked": "0",
+                "code_hash": "11111111111111111111111111111111",
+                "storage_usage": 182,
+                "storage_paid_at": 0,
+                "block_height": 1234567,
+                "block_hash": "11111111111111111111111111111111"
+            }
 
-        # Run custom strategy directly
-        await run_command(argparse.Namespace(
-            command='run',
-            example=None,
-            config=str(strategy_dir / 'config.json')
-        ))
+        mock_provider.get_account = MagicMock(side_effect=get_account)
+        mock_provider_class.return_value = mock_provider
 
-        # Verify connection was checked
-        assert mock_connection.return_value.check_account.called
+        # Mock signer setup
+        mock_signer = MagicMock()
+        mock_signer.account_id = "test.testnet"
+        mock_signer.public_key = MagicMock(return_value="ed25519:mock_key")
+        mock_signer_class.return_value = mock_signer
+
+        # Set up Account mock
+        mock_account = AsyncMock()
+        mock_account.send_money = AsyncMock(return_value={
+            "result": {
+                "transaction_outcome": {
+                    "block_hash": "mock_block_hash",
+                    "id": "mock_tx_id",
+                    "outcome": {
+                        "executor_id": "test.testnet",
+                        "gas_burnt": 2427979026088,
+                        "logs": [],
+                        "receipt_ids": ["mock_receipt_id"],
+                        "status": {"SuccessValue": ""},
+                        "tokens_burnt": "242797902608800000000"
+                    },
+                    "proof": []
+                },
+                "receipts_outcome": [{
+                    "block_hash": "mock_block_hash",
+                    "id": "mock_receipt_id",
+                    "outcome": {
+                        "executor_id": "bob.testnet",
+                        "gas_burnt": 223182562500,
+                        "logs": [],
+                        "receipt_ids": [],
+                        "status": {"SuccessValue": ""},
+                        "tokens_burnt": "22318256250000000000"
+                    },
+                    "proof": []
+                }],
+                "status": {
+                    "SuccessValue": ""
+                }
+            }
+        })
+
+        # Mock Account class
+        with patch('near_api.account.Account') as mock_account_class:
+            mock_account_class.return_value = mock_account
+
+            # Set up LLM mock
+            mock_query.return_value = '{"decision": true, "confidence": 0.85, "reasoning": "Test reasoning"}'
+
+            # Run simple strategy directly
+            await run_command(argparse.Namespace(
+                command='run',
+                example='simple_strategy',
+                config=None
+            ))
+
+            # Verify LLM was queried
+            assert mock_query.called
+
+            # Verify account was created
+            assert mock_account_class.called
+
+            # Verify transaction was sent
+            assert mock_account.send_money.called
+
+            # Verify RPC requests were made
+            assert mock_requests_post.called

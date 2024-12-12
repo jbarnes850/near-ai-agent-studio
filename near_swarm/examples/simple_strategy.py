@@ -51,14 +51,12 @@ async def run_simple_strategy():
 
         # Create a test proposal
         proposal = {
-            "type": "test_transaction",
-            "params": {
-                "action": "transfer",
-                "recipient": "bob.testnet",
-                "amount": "1",
-                "token": "NEAR"
-            },
-            "proposer": config.account_id
+            "receiver_id": "bob.testnet",
+            "actions": [{
+                "Transfer": {
+                    "deposit": str(int(1 * 10**24))  # 1 NEAR in yoctoNEAR
+                }
+            }]
         }
 
         print("\n=== Running Simple Strategy Example ===")
@@ -88,7 +86,7 @@ async def run_simple_strategy():
         if total_votes >= 2:
             print("=== Executing Transaction ===")
             # Execute the transaction using NEAR connection
-            await near.execute_transaction(proposal)
+            await near.send_transaction(proposal)
             print("Transaction executed successfully!")
 
     finally:
