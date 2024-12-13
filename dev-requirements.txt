@@ -1,0 +1,7 @@
+# Development dependencies
+pylint>=2.8.0
+black>=21.5b2
+isort>=5.9.0
+mypy>=0.910
+pyright>=0.0.13
+types-aiohttp>=3.8.0 

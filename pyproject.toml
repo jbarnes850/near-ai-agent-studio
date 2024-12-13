@@ -43,4 +43,13 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=near_swarm" 
+addopts = "-v --cov=near_swarm"
+
+[tool.pyright]
+include = ["near_swarm/**"]
+exclude = ["**/node_modules", "**/__pycache__"]
+reportMissingImports = true
+pythonVersion = "3.12"
+
+[tool.pylance]
+reportMissingImports = "warning" 

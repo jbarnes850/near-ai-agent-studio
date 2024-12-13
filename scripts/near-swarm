@@ -6,11 +6,17 @@ Command-line tool for managing NEAR swarm strategies.
 
 import os
 import sys
+import json
 import click
 import asyncio
 import logging
 from typing import Dict, Any
 from datetime import datetime
+from importlib.util import spec_from_file_location, module_from_spec
+
+# Import core components
+from near_swarm.core.config import load_config
+from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +24,23 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+def import_strategy(strategy_path: str):
+    """Dynamically import strategy module."""
+    try:
+        spec = spec_from_file_location("strategy", strategy_path)
+        if spec is None:
+            raise ImportError(f"Could not load spec for {strategy_path}")
+        
+        module = module_from_spec(spec)
+        if spec.loader is None:
+            raise ImportError(f"Could not load module for {strategy_path}")
+            
+        spec.loader.exec_module(module)
+        return module
+    except Exception as e:
+        logger.error(f"Error importing strategy: {str(e)}")
+        raise
 
 @click.group()
 def cli():
@@ -100,20 +123,22 @@ def run(strategy: str):
     """Run a strategy."""
     try:
         # Add strategy directory to path
-        sys.path.append(os.path.abspath(strategy))
+        strategy_path = os.path.abspath(strategy)
+        sys.path.append(strategy_path)
         
         # Load config
-        import json
-        with open(os.path.join(strategy, 'config.json'), 'r') as f:
+        config_file = os.path.join(strategy_path, 'config.json')
+        with open(config_file, 'r') as f:
             config = json.load(f)
         
-        # Import strategy
-        from strategy import main
+        # Import strategy using our helper
+        strategy_file = os.path.join(strategy_path, 'strategy.py')
+        strategy_module = import_strategy(strategy_file)
         
         click.echo(f"🚀 Starting strategy: {config['name']}")
         
         # Run strategy
-        asyncio.run(main())
+        asyncio.run(strategy_module.run_strategy())
         
     except Exception as e:
         logger.error(f"Error running strategy: {str(e)}")
@@ -190,6 +215,77 @@ def list():
         
     except Exception as e:
         logger.error(f"Error listing strategies: {str(e)}")
+        sys.exit(1)
+
+@cli.command()
+@click.argument('role', type=click.Choice(['market_analyzer', 'risk_manager', 'strategy_optimizer']))
+@click.option('--min-confidence', type=float, default=0.7, help='Minimum confidence threshold')
+@click.option('--min-votes', type=int, default=2, help='Minimum required votes')
+def create_agent(role: str, min_confidence: float, min_votes: int):
+    """Create a new agent with specified role."""
+    try:
+        # Load config
+        config = load_config()
+        
+        # Create agent config
+        swarm_config = SwarmConfig(
+            role=role,
+            min_confidence=min_confidence,
+            min_votes=min_votes
+        )
+        
+        # Initialize agent
+        agent = SwarmAgent(config=config, swarm_config=swarm_config)
+        
+        # Save agent configuration
+        agent_config = {
+            'role': role,
+            'min_confidence': min_confidence,
+            'min_votes': min_votes,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        # Save to agents directory
+        os.makedirs('agents', exist_ok=True)
+        config_file = os.path.join('agents', f'{role.lower()}.json')
+        with open(config_file, 'w') as f:
+            json.dump(agent_config, f, indent=2)
+        
+        click.echo(f"✅ Created new {role} agent")
+        click.echo(f"Configuration saved to: {config_file}")
+        
+    except Exception as e:
+        logger.error(f"Error creating agent: {str(e)}")
+        sys.exit(1)
+
+@cli.command()
+def list_agents():
+    """List all configured agents."""
+    try:
+        if not os.path.exists('agents'):
+            click.echo("No agents configured yet")
+            return
+            
+        agents = []
+        for file in os.listdir('agents'):
+            if file.endswith('.json'):
+                with open(os.path.join('agents', file)) as f:
+                    config = json.load(f)
+                    agents.append(config)
+        
+        if not agents:
+            click.echo("No agents configured yet")
+            return
+            
+        click.echo("\nConfigured Agents:")
+        for agent in agents:
+            click.echo(f"\n{agent['role']}:")
+            click.echo(f"  Confidence: {agent['min_confidence']}")
+            click.echo(f"  Min Votes: {agent['min_votes']}")
+            click.echo(f"  Created: {agent['created_at']}")
+            
+    except Exception as e:
+        logger.error(f"Error listing agents: {str(e)}")
         sys.exit(1)
 
 if __name__ == '__main__':

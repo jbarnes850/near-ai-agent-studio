@@ -1,120 +1,130 @@
 """
-Core Agent Module
-Handles base agent functionality and NEAR integration
+Base Agent Implementation
+Provides core functionality for NEAR Protocol agents.
 """
 
+import os
 import logging
-import asyncio
-from dataclasses import dataclass
 from typing import Optional, Dict, Any
-
-from near_api.providers import JsonProvider
-from near_api.signer import Signer
-from near_api.account import Account
-
+from dataclasses import dataclass
 from near_swarm.core.near_integration import NEARConnection
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class AgentConfig:
-    """Agent configuration."""
-    network: str
-    account_id: str
-    private_key: str
-    llm_provider: str
-    llm_api_key: str
+    """Configuration for NEAR agents."""
+    network: str = "testnet"
+    account_id: str = ""
+    private_key: str = ""
+    llm_provider: str = "hyperbolic"
+    llm_api_key: str = ""
     llm_model: str = "meta-llama/Llama-3.3-70B-Instruct"
     llm_temperature: float = 0.7
     llm_max_tokens: int = 2000
-    node_url: Optional[str] = None
-    api_url: Optional[str] = None  # Added for Hyperbolic API support
-    max_retries: int = 5
-    retry_delay: float = 2.0
+    api_url: Optional[str] = None
 
-    def __post_init__(self):
+    def validate(self) -> None:
         """Validate configuration."""
-        if not self.network:
-            raise ValueError("network is required")
-        if self.network not in ["mainnet", "testnet"]:
-            raise ValueError("network must be 'mainnet' or 'testnet'")
+        if not self.network in ["mainnet", "testnet"]:
+            raise ValueError("Network must be mainnet or testnet")
         if not self.account_id:
-            raise ValueError("account_id is required")
-        if "@" in self.account_id:
-            raise ValueError("Invalid account_id format")
+            raise ValueError("Account ID is required")
         if not self.private_key:
-            raise ValueError("private_key is required")
-        if not self.llm_provider:
-            raise ValueError("llm_provider is required")
+            raise ValueError("Private key is required")
         if not self.llm_api_key:
-            raise ValueError("llm_api_key is required")
-        if self.llm_provider.lower() == 'hyperbolic' and not self.api_url:
-            raise ValueError("api_url is required when using hyperbolic provider")
-        if self.max_retries < 1:
-            raise ValueError("max_retries must be at least 1")
-        if self.retry_delay <= 0:
-            raise ValueError("retry_delay must be positive")
-
+            raise ValueError("LLM API key is required")
 
 class Agent:
-    """Base NEAR agent class."""
+    """Base NEAR Protocol agent."""
 
     def __init__(self, config: AgentConfig):
-        """Initialize agent."""
+        """Initialize agent with configuration."""
         self.config = config
-        self._running = False
-        self._initialize_near_connection()
-
-    def _initialize_near_connection(self):
-        """Initialize NEAR connection."""
-        self.near_connection = NEARConnection(
-            network=self.config.network,
-            account_id=self.config.account_id,
-            private_key=self.config.private_key,
-            node_url=self.config.node_url
+        self.config.validate()
+        
+        # Initialize NEAR connection (always using FastNEAR for testnet)
+        self.near = NEARConnection(
+            network="testnet",  # Force testnet
+            account_id=config.account_id,
+            private_key=config.private_key
         )
+        
+        self._is_running = False
+        logger.info(f"Initialized agent: {config.account_id}")
 
     async def start(self):
-        """Start agent."""
-        try:
-            # Test connection
-            await self.near_connection.check_account(self.config.account_id)
-            self._running = True
-            logger.info(f"Agent started successfully for {self.config.account_id}")
-        except Exception as e:
-            logger.error(f"Failed to start agent: {str(e)}")
-            raise
+        """Start the agent."""
+        if not self._is_running:
+            # Verify account exists
+            if not await self.near.check_account(self.config.account_id):
+                raise RuntimeError(f"Account {self.config.account_id} not found")
+                
+            self._is_running = True
+            logger.info(f"Started agent: {self.config.account_id}")
 
     async def stop(self):
-        """Stop agent."""
-        self._running = False
-        logger.info(f"Agent stopped for {self.config.account_id}")
+        """Stop the agent."""
+        if self._is_running:
+            self._is_running = False
+            logger.info(f"Stopped agent: {self.config.account_id}")
 
     def is_running(self) -> bool:
         """Check if agent is running."""
-        return self._running
+        return self._is_running
 
-    async def execute_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute an action."""
+    async def send_tokens(
+        self,
+        recipient_id: str,
+        amount: str,  # Amount in NEAR
+        token_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Send tokens to another account.
+        
+        Args:
+            recipient_id: Recipient account ID
+            amount: Amount to send in NEAR (will be converted to yoctoNEAR)
+            token_id: Optional token contract ID for NEP-141 tokens
+            
+        Returns:
+            Transaction outcome
+        """
+        if not self._is_running:
+            raise RuntimeError("Agent must be running to send tokens")
+            
         try:
-            if not self.is_running():
-                raise Exception("Agent is not running")
-
-            # Validate action
-            if not action.get("type"):
-                raise ValueError("Missing action type")
-            if not action.get("params"):
-                raise ValueError("Missing action parameters")
-
-            # Execute action based on type
-            if action["type"] == "transaction":
-                return await self.near_connection.send_transaction(action["params"])
-            else:
-                raise ValueError(f"Unsupported action type: {action['type']}")
-
+            # Convert amount from string to float for NEAR conversion
+            amount_near = float(amount)
+            
+            # Send tokens using async transaction method
+            result = await self.near.send_transaction(
+                receiver_id=recipient_id,
+                amount=amount_near
+            )
+            
+            logger.info(
+                f"Sent {amount} NEAR to {recipient_id}"
+                f"{' via ' + token_id if token_id else ''}"
+            )
+            
+            return result
+            
         except Exception as e:
-            logger.error(f"Failed to execute action: {str(e)}")
+            logger.error(f"Error sending tokens: {str(e)}")
+            raise
+
+    async def check_balance(self, token_id: Optional[str] = None) -> str:
+        """Check account balance."""
+        if not self._is_running:
+            raise RuntimeError("Agent must be running to check balance")
+            
+        try:
+            balance = await self.near.get_account_balance()
+            return balance["available"]
+            
+        except Exception as e:
+            logger.error(f"Error checking balance: {str(e)}")
             raise
 
     async def close(self):

@@ -10,6 +10,7 @@ import logging
 import aiohttp
 import json
 from dataclasses import dataclass
+from aiohttp import ClientSession, ClientResponse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -20,10 +21,10 @@ class LLMConfig:
     """Configuration for LLM providers"""
     provider: str
     api_key: str
-    model: str
+    model: str = "meta-llama/Llama-3.3-70B-Instruct"
     temperature: float = 0.7
     max_tokens: int = 2000
-    api_url: Optional[str] = None
+    api_url: str = "https://api.hyperbolic.ai/v1"
 
     def validate(self) -> None:
         """Validate configuration"""
@@ -37,6 +38,8 @@ class LLMConfig:
             raise ValueError("Temperature must be between 0 and 1")
         if self.max_tokens < 1:
             raise ValueError("Max tokens must be positive")
+        if not self.api_url:
+            self.api_url = "https://api.hyperbolic.ai/v1"
 
 class LLMProvider(ABC):
     """Abstract base class for LLM providers"""
@@ -59,6 +62,10 @@ class LLMProvider(ABC):
         max_tokens: Optional[int] = None
     ) -> List[str]:
         """Query the LLM with multiple prompts"""
+        pass
+
+    async def close(self) -> None:
+        """Clean up resources."""
         pass
 
 class OpenAIProvider(LLMProvider):
@@ -136,6 +143,12 @@ class HyperbolicProvider(LLMProvider):
         """Initialize Hyperbolic provider"""
         self.config = config
         self.config.validate()
+        self.session = None
+
+    async def initialize(self):
+        """Initialize session if needed."""
+        if self.session is None:
+            self.session = aiohttp.ClientSession()
 
     async def query(
         self,
@@ -143,37 +156,44 @@ class HyperbolicProvider(LLMProvider):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None
     ) -> str:
-        """Query Hyperbolic API"""
+        """Query Hyperbolic API."""
+        if self.session is None:
+            self.session = aiohttp.ClientSession()
+            
         try:
-            api_url = self.config.api_url.rstrip('/')
             headers = {
                 "Authorization": f"Bearer {self.config.api_key}",
                 "Content-Type": "application/json"
             }
 
-            async with aiohttp.ClientSession() as session:
-                payload = {
-                    "model": self.config.model,
-                    "prompt": prompt,  # Hyperbolic uses 'prompt' instead of 'messages'
-                    "temperature": temperature or self.config.temperature,
-                    "max_tokens": max_tokens or self.config.max_tokens,
-                    "stream": False
-                }
+            payload = {
+                "model": self.config.model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a NEAR Protocol trading agent. Always respond in valid JSON format."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": temperature or self.config.temperature,
+                "max_tokens": max_tokens or self.config.max_tokens,
+                "top_p": 0.9
+            }
 
-                async with session.post(
-                    f"{api_url}/completions",  # Hyperbolic endpoint
-                    headers=headers,
-                    json=payload
-                ) as response:
-                    if response.status != 200:
-                        error_data = await response.json()
-                        raise RuntimeError(f"Error code: {response.status} - {error_data}")
-
-                    data = await response.json()
-                    return data["choices"][0]["text"]
-
+            async with self.session.post(
+                self.config.api_url,
+                headers=headers,
+                json=payload
+            ) as response:
+                if response.status != 200:
+                    raise RuntimeError(f"API error: {response.status}")
+                data = await response.json()
+                return data["choices"][0]["message"]["content"]
         except Exception as e:
-            logger.error(f"Error querying Hyperbolic API: {str(e)}")
+            logger.error(f"Error querying API: {str(e)}")
             raise
 
     async def batch_query(
@@ -183,6 +203,8 @@ class HyperbolicProvider(LLMProvider):
         max_tokens: Optional[int] = None
     ) -> List[str]:
         """Query Hyperbolic API with multiple prompts"""
+        await self.initialize()
+        
         try:
             responses = []
             for prompt in prompts:
@@ -197,6 +219,12 @@ class HyperbolicProvider(LLMProvider):
         except Exception as e:
             logger.error(f"Error in batch query: {str(e)}")
             raise
+
+    async def close(self):
+        """Clean up resources"""
+        if self.session:
+            await self.session.close()
+            self.session = None
 
 class MockProvider(LLMProvider):
     """Mock LLM provider for testing"""
@@ -230,24 +258,33 @@ class MockProvider(LLMProvider):
 def create_llm_provider(config: Optional[LLMConfig] = None) -> LLMProvider:
     """Create LLM provider from config or environment variables"""
     if not config:
-        # Load from environment
+        # Handle potential None values from environment
+        api_key = os.getenv('LLM_API_KEY')
+        if not api_key:
+            raise ValueError("LLM_API_KEY environment variable is required")
+
         config = LLMConfig(
-            provider=os.getenv('LLM_PROVIDER', 'mock'),  # Default to mock for testing
-            api_key=os.getenv('LLM_API_KEY', 'mock_key'),
-            model=os.getenv('LLM_MODEL', 'mock-model'),
+            provider=os.getenv('LLM_PROVIDER', 'hyperbolic'),
+            api_key=api_key,
+            model=os.getenv('LLM_MODEL', 'meta-llama/Llama-3.3-70B-Instruct'),
             temperature=float(os.getenv('LLM_TEMPERATURE', '0.7')),
             max_tokens=int(os.getenv('LLM_MAX_TOKENS', '2000')),
-            api_url=os.getenv('HYPERBOLIC_API_URL')
+            api_url=os.getenv('HYPERBOLIC_API_URL', 'https://api.hyperbolic.ai/v1')
         )
 
     config.validate()
 
-    provider = config.provider.lower()
+    # Clean provider string and handle comments
+    provider = config.provider.lower().split('#')[0].strip()
+
     if provider == 'hyperbolic':
         return HyperbolicProvider(config)
     elif provider == 'openai':
         return OpenAIProvider(config)
     elif provider == 'mock':
-        return MockProvider(config)  # Add mock provider support
+        return MockProvider(config)
     else:
-        raise ValueError(f"Unsupported LLM provider: {config.provider}")
+        raise ValueError(
+            f"Unsupported LLM provider: {provider}. "
+            "Supported providers: hyperbolic, openai, mock"
+        )

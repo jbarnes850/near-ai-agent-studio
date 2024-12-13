@@ -23,7 +23,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'near-swarm=near_swarm.core.cli:main',
+            'near-swarm=near_swarm.core.cli:cli',
         ],
     },
     python_requires=">=3.8",

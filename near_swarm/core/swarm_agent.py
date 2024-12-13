@@ -42,13 +42,18 @@ class SwarmAgent(Agent):
         super().__init__(config)
         self.swarm_config = swarm_config
         self.swarm_peers: List[SwarmAgent] = []
+
+        # Handle optional api_url with default
+        api_url = config.api_url or "https://api.hyperbolic.ai/v1"
+
+        # Initialize LLM provider with validated config
         self.llm_provider = create_llm_provider(LLMConfig(
             provider=config.llm_provider,
             api_key=config.llm_api_key,
             model=config.llm_model,
             temperature=config.llm_temperature,
             max_tokens=config.llm_max_tokens,
-            api_url=config.api_url  # Add api_url to LLMConfig
+            api_url=api_url  # Now we know this is not None
         ))
         self._is_running = False
         logger.info(f"Initialized swarm agent with role: {swarm_config.role}")
@@ -124,26 +129,47 @@ class SwarmAgent(Agent):
             # Role-specific evaluation using LLM
             role_prompt = ""
             if self.swarm_config.role == "risk_manager":
-                role_prompt = """Evaluate the proposal from a risk management perspective. Consider:
-1. Transaction safety and security
-2. Asset exposure and potential losses
-3. Smart contract risks
-4. Market volatility impact
-5. Compliance and regulatory concerns"""
+                role_prompt = """As a Risk Manager, your expertise is in:
+- Position size optimization
+- Exposure management
+- Slippage calculation
+- Smart contract risk assessment
+- Network security evaluation
+
+Key Metrics to Consider:
+1. Current portfolio exposure
+2. Historical volatility patterns
+3. Smart contract security status
+4. Network congestion levels
+5. Liquidity depth impact"""
             elif self.swarm_config.role == "market_analyzer":
-                role_prompt = """Evaluate the proposal from a market analysis perspective. Consider:
-1. Current market conditions
-2. Price trends and volatility
-3. Trading volume and liquidity
-4. Market sentiment
-5. Potential market impact"""
+                role_prompt = """As a Market Analyzer, your expertise is in:
+- Price trend analysis and pattern recognition
+- Volume and liquidity assessment
+- Market sentiment evaluation
+- Technical indicator interpretation
+- Cross-chain market comparison
+
+Key Metrics to Consider:
+1. Price momentum and volatility
+2. Trading volume trends
+3. Market depth and liquidity
+4. Order book imbalances
+5. Cross-exchange price differentials"""
             elif self.swarm_config.role == "strategy_optimizer":
-                role_prompt = """Evaluate the proposal from a strategy optimization perspective. Consider:
-1. Strategy effectiveness
-2. Resource utilization
-3. Expected returns
-4. Risk-reward ratio
-5. Alignment with objectives"""
+                role_prompt = """As a Strategy Optimizer, your expertise is in:
+- Gas optimization
+- Execution timing
+- Route optimization
+- Fee minimization
+- Performance analysis
+
+Key Metrics to Consider:
+1. Historical gas prices
+2. Network congestion patterns
+3. DEX routing efficiency
+4. Fee structures across venues
+5. Historical strategy performance"""
             else:
                 raise RuntimeError(f"transaction_outcome rejected - Unsupported role: {self.swarm_config.role}")
 
@@ -162,12 +188,28 @@ class SwarmAgent(Agent):
     async def _evaluate_with_llm(self, proposal: Dict[str, Any], role_prompt: str) -> Dict[str, Any]:
         """Evaluate proposal using LLM with role-specific prompt."""
         try:
-            # Validate proposal structure
-            if not isinstance(proposal, dict) or 'proposer' not in proposal:
-                raise ValueError("Invalid proposal format: missing required 'proposer' field")
+            prompt = f"""You are a specialized AI agent in a NEAR Protocol trading swarm with the role of {self.swarm_config.role}.
 
-            # Generate evaluation prompt
-            prompt = self._generate_evaluation_prompt(proposal, role_prompt)
+{role_prompt}
+
+Current Proposal:
+{json.dumps(proposal, indent=2)}
+
+Based on your role and expertise, evaluate this proposal and provide your decision in JSON format:
+{{
+    "decision": boolean,      // Whether to approve the proposal
+    "confidence": float,      // Your confidence level (0.0 to 1.0)
+    "reasoning": string       // Detailed explanation of your decision
+}}
+
+Focus on:
+1. Risk assessment and market conditions
+2. Technical analysis and price trends
+3. Historical performance and patterns
+4. Network activity and on-chain metrics
+5. Liquidity and volume analysis
+
+Response:"""
 
             # Query LLM provider
             response = await self.llm_provider.query(prompt)
@@ -207,15 +249,22 @@ Response:"""
     def _parse_llm_response(self, response: str) -> Dict[str, Any]:
         """Parse and validate LLM response."""
         try:
+            # Handle string-based decision values
             result = json.loads(response)
-
+            
+            # Convert string decision to boolean if needed
+            if isinstance(result['decision'], str):
+                result['decision'] = result['decision'].lower() != 'hold'
+            
             # Validate required fields
             if not all(key in result for key in ['decision', 'confidence', 'reasoning']):
                 raise ValueError("Missing required fields in LLM response")
 
+            # Convert reasoning list to string if needed
+            if isinstance(result['reasoning'], list):
+                result['reasoning'] = ' '.join(result['reasoning'])
+
             # Validate types and ranges
-            if not isinstance(result['decision'], bool):
-                raise ValueError("Decision must be a boolean")
             if not isinstance(result['confidence'], (int, float)) or not 0 <= result['confidence'] <= 1:
                 raise ValueError("Confidence must be a float between 0 and 1")
 

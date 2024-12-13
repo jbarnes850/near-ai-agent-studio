@@ -55,52 +55,69 @@ graph TB
     Core[Agent Core]
     style Core fill:black,stroke:#00C1DE,stroke-width:3px,color:white
 
-    %% Integration Layer
-    NEAR_Int[NEAR Integration]
-    LLM_Int[LLM Integration]
-    Mem[Memory Manager]
-    style NEAR_Int fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-    style LLM_Int fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-    style Mem fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    %% Agent Capabilities
+    OnChain[Onchain Actions]
+    AI[AI Reasoning]
+    Memory[Agent Memory]
+    style OnChain fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    style AI fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    style Memory fill:black,stroke:#00C1DE,stroke-width:2px,color:white
 
-    %% External Services
-    NEAR[NEAR Protocol]
-    LLM[Hyperbolic AI]
-    Storage[State Storage]
-    style NEAR fill:#00C1DE,stroke:black,stroke-width:2px,color:black
+    %% External Systems
+    Blockchain[NEAR Protocol]
+    LLM[Language Models]
+    Storage[Persistent State]
+    style Blockchain fill:#00C1DE,stroke:black,stroke-width:2px,color:black
     style LLM fill:#00C1DE,stroke:black,stroke-width:2px,color:black
     style Storage fill:#00C1DE,stroke:black,stroke-width:2px,color:black
 
-    %% Swarm Agents
+    %% Swarm Intelligence Layer
     subgraph Swarm[AI Swarm]
         direction TB
-        Agent1[Market Analyzer]
-        Agent2[Risk Manager]
-        Agent3[Strategy Optimizer]
+        Analyzer[Market Analyzer<br/>Identifies Opportunities]
+        Risk[Risk Manager<br/>Validates Safety]
+        Strategy[Strategy Optimizer<br/>Improves Performance]
 
-        style Agent1 fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-        style Agent2 fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-        style Agent3 fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Analyzer fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Risk fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Strategy fill:black,stroke:#00C1DE,stroke-width:2px,color:white
     end
     style Swarm fill:none,stroke:#00C1DE,stroke-width:3px,color:white
 
-    %% Connections
-    Core --> NEAR_Int
-    Core --> LLM_Int
-    Core --> Mem
+    %% Consensus Layer
+    subgraph Consensus[Consensus System]
+        direction TB
+        Voting[Voting Mechanism]
+        Confidence[Confidence Scoring]
+        
+        style Voting fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Confidence fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    end
+    style Consensus fill:none,stroke:#00C1DE,stroke-width:3px,color:white
+
+    %% Core Connections
+    Core --> OnChain
+    Core --> AI
+    Core --> Memory
     Core --> Swarm
-    NEAR_Int <--> NEAR
-    LLM_Int <--> LLM
-    Mem <--> Storage
+    Core --> Consensus
+
+    %% External Connections
+    OnChain <--> Blockchain
+    AI <--> LLM
+    Memory <--> Storage
 
     %% Swarm Connections
-    Agent1 <--> Agent2
-    Agent2 <--> Agent3
-    Agent3 <--> Agent1
+    Analyzer <--> Risk
+    Risk <--> Strategy
+    Strategy <--> Analyzer
 
+    %% Consensus Connections
+    Swarm <--> Consensus
+    
     %% Labels
     classDef label fill:none,stroke:none,color:white
-    class Core,NEAR_Int,LLM_Int,Mem,NEAR,LLM,Storage,Agent1,Agent2,Agent3 label
+    class Core,OnChain,AI,Memory,Blockchain,LLM,Storage,Analyzer,Risk,Strategy,Voting,Confidence label
 
     %% Title
     classDef title fill:none,stroke:none,color:#00C1DE,font-size:18px
