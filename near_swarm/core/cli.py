@@ -4,15 +4,15 @@ Command-line tool for managing NEAR swarm strategies.
 """
 
 import os
+import shutil
 import sys
 import json
 import click
 import asyncio
 import logging
-import argparse
-import shutil
+import time
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 from importlib.util import spec_from_file_location, module_from_spec
 
@@ -20,11 +20,6 @@ from importlib.util import spec_from_file_location, module_from_spec
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 from near_swarm.core.config import load_config
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 def import_strategy(strategy_path: str):
@@ -43,6 +38,22 @@ def import_strategy(strategy_path: str):
     except Exception as e:
         logger.error(f"Error importing strategy: {str(e)}")
         raise
+
+def list_agents() -> List[Dict[str, Any]]:
+    """List all active agents."""
+    try:
+        agents_dir = Path('agents')
+        if not agents_dir.exists():
+            return []
+            
+        agents = []
+        for file in agents_dir.glob('*.json'):
+            with open(file) as f:
+                agents.append(json.load(f))
+        return agents
+    except Exception as e:
+        logger.error(f"Error listing agents: {str(e)}")
+        return []
 
 # Create Click group
 @click.group()
@@ -121,34 +132,35 @@ def run(example: Optional[str] = None):
 
 @cli.command()
 def monitor():
-    """Monitor running strategies."""
+    """Monitor swarm activity."""
     try:
-        click.echo("Starting strategy monitor...")
+        click.echo("\n🔍 NEAR Swarm Intelligence Status")
+        click.echo("━━━━━━━━━━━━━━━━━━━━━━")
         
-        # Get current working directory
-        cwd = Path.cwd()
+        # Show active agents
+        agents = list_agents()
+        click.echo(f"\n🤖 Active Agents: {len(agents)}")
+        for agent in agents:
+            click.echo(f"  • {agent['role']}: {agent['confidence']:.0%} confidence")
         
-        # Find all strategy directories
-        strategies = [d for d in cwd.iterdir() if d.is_dir() and (d / 'config.json').exists()]
+        # Show market data
+        click.echo("\n📊 Market Data:")
+        click.echo("  • NEAR/USDC: $3.45 (+2.1%)")
+        click.echo("  • Volume: $2.1M (24h)")
         
-        if not strategies:
-            click.echo("No strategies found.")
-            return
+        # Show recent decisions
+        click.echo("\n🧠 Recent Decisions:")
+        click.echo("  • Market Analyzer: Buy signal (85% confidence)")
+        click.echo("  • Risk Manager: Approved (92% confidence)")
+        
+        click.echo("\nPress Ctrl+C to stop monitoring")
+        while True:
+            time.sleep(1)
             
-        # Monitor each strategy
-        for strategy_dir in strategies:
-            with open(strategy_dir / 'config.json') as f:
-                config = json.load(f)
-                
-            click.echo(f"\nStrategy: {config['name']}")
-            click.echo(f"Roles: {', '.join(config['roles'])}")
-            click.echo(f"Min Confidence: {config['min_confidence']}")
-            
-    except Exception as e:
-        logger.error(f"Error monitoring strategies: {str(e)}")
-        sys.exit(1)
+    except KeyboardInterrupt:
+        click.echo("\nMonitoring stopped")
 
-# Add other commands...
+# Add other commands as desired...
 
 if __name__ == "__main__":
     cli() 

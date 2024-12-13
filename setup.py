@@ -7,11 +7,14 @@ setup(
     install_requires=[
         "aiohttp>=3.8.0",
         "python-dotenv>=0.19.0",
-        "near-api-py>=0.1.0",
+        "py-near>=0.1.0",
+        "py-near-primitives>=0.1.0",
         "pytest>=7.0.0",
         "pytest-asyncio>=0.18.0",
         "pytest-cov>=3.0.0",
-        "openai>=1.12.0",  # Required for async LLM provider interface
+        "click>=8.0.0",
+        "requests>=2.31.0",
+        "hyperbolic>=0.1.0"
     ],
     extras_require={
         "dev": [

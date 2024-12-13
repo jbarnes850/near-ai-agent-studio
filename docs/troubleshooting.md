@@ -261,7 +261,6 @@ async def test_opportunity_analysis():
    ```bash
    ./scripts/verify_all.sh
    ```
-
 3. Join our Discord community: https://discord.gg/near
 
 4. Open an issue: https://github.com/jbarnes850/near-swarm-intelligence/issues
