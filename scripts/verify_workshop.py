@@ -21,13 +21,31 @@ async def test_llm(provider):
         assert "OK" in response, "LLM response validation failed"
         print("✓ LLM integration verified")
         
-        # Test JSON response format
-        test_prompt = """Evaluate this simple NEAR transfer:
+        # Test JSON response format with structured prompt
+        test_prompt = """You are a specialized AI agent in a NEAR Protocol trading swarm.
+Evaluate this simple NEAR transfer based on current market conditions:
+
+Type: transfer
 Amount: 1 NEAR
 Recipient: test.near
-Current price: $5.00"""
+Market Context:
+- Current Price: $5.00
+- 24h Volume: $2.1M
+- Market Trend: Stable
+- Network Load: Low
 
-        response = await provider.query(test_prompt)
+Provide your evaluation in JSON format with the following structure:
+{
+    "decision": boolean,      // Your decision to approve or reject
+    "confidence": float,      // Your confidence level (0.0 to 1.0)
+    "reasoning": string       // Detailed explanation of your decision
+}"""
+
+        response = await provider.query(
+            test_prompt,
+            temperature=0.7,
+            max_tokens=1000
+        )
         print("\nTest LLM Response:")
         print(response)
         print("\n✓ LLM JSON format verified")
