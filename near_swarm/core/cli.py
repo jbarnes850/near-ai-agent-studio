@@ -39,7 +39,7 @@ def import_strategy(strategy_path: str):
         logger.error(f"Error importing strategy: {str(e)}")
         raise
 
-def list_agents() -> List[Dict[str, Any]]:
+def get_agents() -> List[Dict[str, Any]]:
     """List all active agents."""
     try:
         agents_dir = Path('agents')
@@ -98,6 +98,62 @@ def init(name: str):
         sys.exit(1)
 
 @cli.command()
+@click.argument('role')
+@click.option('--min-confidence', type=float, default=0.7, help='Minimum confidence level (0-1)')
+def create_agent(role: str, min_confidence: float):
+    """Create a new agent with the specified role."""
+    try:
+        # Validate role
+        valid_roles = ["market_analyzer", "risk_manager", "strategy_optimizer"]
+        if role not in valid_roles:
+            click.echo(f"Invalid role: {role}")
+            click.echo(f"Valid roles: {', '.join(valid_roles)}")
+            sys.exit(1)
+
+        # Create agents directory if it doesn't exist
+        agents_dir = Path('agents')
+        agents_dir.mkdir(exist_ok=True)
+
+        # Create agent config
+        agent_config = {
+            "role": role,
+            "min_confidence": min_confidence,
+            "created_at": datetime.now().isoformat(),
+            "status": "active"
+        }
+
+        # Save agent config
+        agent_file = agents_dir / f"{role}.json"
+        with open(agent_file, 'w') as f:
+            json.dump(agent_config, f, indent=2)
+
+        click.echo(f"✅ Created {role} agent with {min_confidence:.0%} confidence threshold")
+
+    except Exception as e:
+        logger.error(f"Error creating agent: {str(e)}")
+        sys.exit(1)
+
+@cli.command()
+def list_agents():
+    """List all active agents."""
+    try:
+        agents = get_agents()
+        if not agents:
+            click.echo("No agents found.")
+            return
+
+        click.echo("\n🤖 Active Agents:")
+        for agent in agents:
+            click.echo(f"  • {agent['role']}: {agent['min_confidence']:.0%} confidence threshold")
+            click.echo(f"    Created: {agent['created_at']}")
+            click.echo(f"    Status: {agent['status']}")
+            click.echo("")
+
+    except Exception as e:
+        logger.error(f"Error listing agents: {str(e)}")
+        sys.exit(1)
+
+@cli.command()
 @click.option('--example', type=str, help='Run an example strategy')
 def run(example: Optional[str] = None):
     """Run a strategy."""
@@ -138,10 +194,10 @@ def monitor():
         click.echo("━━━━━━━━━━━━━━━━━━━━━━")
         
         # Show active agents
-        agents = list_agents()
+        agents = get_agents()
         click.echo(f"\n🤖 Active Agents: {len(agents)}")
         for agent in agents:
-            click.echo(f"  • {agent['role']}: {agent['confidence']:.0%} confidence")
+            click.echo(f"  • {agent['role']}: {agent['min_confidence']:.0%} confidence")
         
         # Show market data
         click.echo("\n📊 Market Data:")

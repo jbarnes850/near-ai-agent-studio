@@ -129,49 +129,94 @@ class SwarmAgent(Agent):
             # Role-specific evaluation using LLM
             role_prompt = ""
             if self.swarm_config.role == "risk_manager":
-                role_prompt = """As a Risk Manager, your expertise is in:
-- Position size optimization
-- Exposure management
-- Slippage calculation
-- Smart contract risk assessment
-- Network security evaluation
+                role_prompt = """As a Risk Manager, evaluate this proposal focusing on:
+1. Position Size Analysis:
+   - Check if the transaction amount is within safe limits
+   - Evaluate total portfolio exposure
+   - Consider historical volatility impact
 
-Key Metrics to Consider:
-1. Current portfolio exposure
-2. Historical volatility patterns
-3. Smart contract security status
-4. Network congestion levels
-5. Liquidity depth impact"""
+2. Security Assessment:
+   - Analyze smart contract risks
+   - Evaluate network security status
+   - Check for any recent security incidents
+
+3. Risk Metrics:
+   - Calculate potential downside risk
+   - Assess slippage impact
+   - Evaluate market depth and liquidity
+
+4. Compliance and Limits:
+   - Verify transaction limits
+   - Check for any regulatory concerns
+   - Ensure compliance with portfolio guidelines
+
+Your primary responsibility is protecting assets and maintaining risk parameters."""
+
             elif self.swarm_config.role == "market_analyzer":
-                role_prompt = """As a Market Analyzer, your expertise is in:
-- Price trend analysis and pattern recognition
-- Volume and liquidity assessment
-- Market sentiment evaluation
-- Technical indicator interpretation
-- Cross-chain market comparison
+                role_prompt = """As a Market Analyzer, evaluate this proposal focusing on:
+1. Price Analysis:
+   - Current price trends and momentum
+   - Support and resistance levels
+   - Volume profile and patterns
 
-Key Metrics to Consider:
-1. Price momentum and volatility
-2. Trading volume trends
-3. Market depth and liquidity
-4. Order book imbalances
-5. Cross-exchange price differentials"""
+2. Market Conditions:
+   - Overall market sentiment
+   - Trading volume analysis
+   - Market depth assessment
+
+3. Technical Indicators:
+   - Moving averages and trends
+   - Volatility metrics
+   - Momentum indicators
+
+4. Cross-market Analysis:
+   - Price correlations
+   - Arbitrage opportunities
+   - Market inefficiencies
+
+Your primary responsibility is market analysis and trend identification."""
+
             elif self.swarm_config.role == "strategy_optimizer":
-                role_prompt = """As a Strategy Optimizer, your expertise is in:
-- Gas optimization
-- Execution timing
-- Route optimization
-- Fee minimization
-- Performance analysis
+                role_prompt = """As a Strategy Optimizer, evaluate this proposal focusing on:
+1. Execution Optimization:
+   - Gas price analysis
+   - Network congestion assessment
+   - Timing optimization
 
-Key Metrics to Consider:
-1. Historical gas prices
-2. Network congestion patterns
-3. DEX routing efficiency
-4. Fee structures across venues
-5. Historical strategy performance"""
+2. Cost Analysis:
+   - Transaction fee evaluation
+   - Slippage estimation
+   - Total cost impact
+
+3. Performance Metrics:
+   - Historical strategy performance
+   - Success rate analysis
+   - Optimization opportunities
+
+4. Technical Efficiency:
+   - Route optimization
+   - Protocol efficiency
+   - Implementation improvements
+
+Your primary responsibility is optimizing execution and performance."""
+
             else:
                 raise RuntimeError(f"transaction_outcome rejected - Unsupported role: {self.swarm_config.role}")
+
+            # Add market context analysis
+            if "market_context" in proposal["params"]:
+                context = proposal["params"]["market_context"]
+                role_prompt += f"""
+
+Current Market Context:
+• NEAR Price: ${context.get('current_price', 'N/A')}
+• 24h Volume: {context.get('24h_volume', 'N/A')}
+• Volatility: {context.get('volatility', 'N/A')}
+• Market Trend: {context.get('market_trend', 'N/A')}
+• Gas Price: {context.get('gas_price', 'N/A')}
+• Network Load: {context.get('network_load', 'N/A')}
+
+Consider these market conditions in your evaluation."""
 
             result = await self._evaluate_with_llm(proposal, role_prompt)
             return result
@@ -193,33 +238,38 @@ Key Metrics to Consider:
 {role_prompt}
 
 Current Proposal:
-{json.dumps(proposal, indent=2)}
+Type: {proposal['type']}
+Amount: {proposal['params'].get('amount')} {proposal['params'].get('token')}
+Recipient: {proposal['params'].get('recipient')}
 
-Based on your role and expertise, evaluate this proposal and provide your decision in JSON format:
+Evaluate this proposal based on your role and expertise. Consider all market conditions and risk factors.
+Provide a thorough analysis with clear reasoning for your decision.
+
+Response must be in valid JSON format with:
 {{
-    "decision": boolean,      // Whether to approve the proposal
+    "decision": boolean,      // Your decision to approve or reject
     "confidence": float,      // Your confidence level (0.0 to 1.0)
     "reasoning": string       // Detailed explanation of your decision
-}}
-
-Focus on:
-1. Risk assessment and market conditions
-2. Technical analysis and price trends
-3. Historical performance and patterns
-4. Network activity and on-chain metrics
-5. Liquidity and volume analysis
-
-Response:"""
+}}"""
 
             # Query LLM provider
             response = await self.llm_provider.query(prompt)
 
             # Parse and validate response
-            return self._parse_llm_response(response)
+            try:
+                result = json.loads(response)
+                if not isinstance(result.get("decision"), bool):
+                    raise ValueError("Decision must be a boolean")
+                if not isinstance(result.get("confidence"), (int, float)):
+                    raise ValueError("Confidence must be a number")
+                if not isinstance(result.get("reasoning"), str):
+                    raise ValueError("Reasoning must be a string")
+                return result
+            except json.JSONDecodeError:
+                raise ValueError("Invalid JSON response from LLM")
 
         except Exception as e:
             logger.error(f"LLM evaluation failed: {str(e)}")
-            # Return failure response instead of raising error
             return {
                 "decision": False,
                 "confidence": 0.0,

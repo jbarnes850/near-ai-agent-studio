@@ -54,6 +54,18 @@ echo -e "• ${GREEN}Risk Management${NC} - Safety and exposure control"
 echo -e "• ${GREEN}Strategy Optimization${NC} - Performance tuning"
 echo ""
 
+# Check for virtual environment
+if [[ -z "${VIRTUAL_ENV}" ]]; then
+    echo -e "${RED}⚠️  Virtual environment not activated${NC}"
+    echo -e "Please run the following commands first:"
+    echo -e "${CYAN}python3 -m venv venv${NC}"
+    echo -e "${CYAN}source venv/bin/activate${NC}"
+    echo -e "${CYAN}pip install -r requirements.txt${NC}"
+    echo -e "${CYAN}pip install -e .${NC}"
+    echo -e "\nThen run this script again."
+    exit 1
+fi
+
 # Check for required commands
 check_command python3
 check_command pip
@@ -65,17 +77,6 @@ section_header "🔧 Setting Up Environment"
 # Check Python version
 python3 -c "import sys; assert sys.version_info >= (3, 12), 'Python 3.12+ required'"
 echo -e "${GREEN}✓${NC} Python version OK"
-
-# Create and activate virtual environment
-show_progress "Creating Python virtual environment"
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-show_progress "Installing dependencies"
-pip install --upgrade pip >/dev/null 2>&1
-pip install -r requirements.txt >/dev/null 2>&1
-pip install -e . >/dev/null 2>&1
 
 # Add market data verification
 section_header "📊 Testing Market Data Integration"
@@ -95,15 +96,23 @@ section_header "🧠 Testing LLM Integration"
 show_progress "Verifying Hyperbolic AI connection"
 python3 -c "
 from near_swarm.core.llm_provider import create_llm_provider, LLMConfig
-import asyncio, os
+from dotenv import load_dotenv
+import asyncio
+import os
+
 async def test_llm():
+    load_dotenv()
     provider = create_llm_provider(LLMConfig(
-        provider='hyperbolic',
+        provider=os.getenv('LLM_PROVIDER', 'hyperbolic'),
         api_key=os.getenv('LLM_API_KEY'),
-        model='meta-llama/Llama-3.3-70B-Instruct'
+        model=os.getenv('LLM_MODEL', 'meta-llama/Llama-3.3-70B-Instruct'),
+        temperature=float(os.getenv('LLM_TEMPERATURE', '0.1')),
+        max_tokens=int(os.getenv('LLM_MAX_TOKENS', '1024')),
+        api_url=os.getenv('HYPERBOLIC_API_URL', 'https://api.hyperbolic.xyz/v1/chat/completions')
     ))
     response = await provider.query('Respond with OK if connected')
     assert 'OK' in response
+    print('LLM connection verified successfully')
 asyncio.run(test_llm())
 "
 
@@ -151,11 +160,11 @@ section_header "📈 Running Demo Strategy"
 
 # Create and run demo strategy
 show_progress "Initializing demo strategy"
-near-swarm init arbitrage --name demo-strategy
+near-swarm init arbitrage
 
 # Run the strategy
 show_progress "Running demo strategy"
-cd demo-strategy
+cd arbitrage
 near-swarm run --example simple_strategy
 
 # Add demo transaction

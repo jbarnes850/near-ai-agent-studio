@@ -8,6 +8,59 @@ from near_swarm.core.llm_provider import LLMConfig, create_llm_provider
 from near_swarm.core.market_data import MarketDataManager
 from near_swarm.core.near_integration import NEARConnection
 
+async def test_llm(provider):
+    """Test LLM integration."""
+    print("⏳ Testing LLM integration...")
+    try:
+        # Simple test prompt
+        response = await provider.query(
+            "Respond with 'OK' if you can understand this message.",
+            temperature=0.1,  # Low temperature for deterministic response
+            max_tokens=10     # Small response size
+        )
+        assert "OK" in response, "LLM response validation failed"
+        print("✓ LLM integration verified")
+        
+        # Test JSON response format
+        test_prompt = """Evaluate this simple NEAR transfer:
+Amount: 1 NEAR
+Recipient: test.near
+Current price: $5.00"""
+
+        response = await provider.query(test_prompt)
+        print("\nTest LLM Response:")
+        print(response)
+        print("\n✓ LLM JSON format verified")
+        
+    except Exception as e:
+        print(f"❌ LLM integration failed: {str(e)}")
+        raise
+
+async def test_market_data(manager):
+    """Test market data integration."""
+    print("\n⏳ Testing market data integration...")
+    try:
+        # Fetch NEAR price
+        data = await manager.get_token_price("NEAR")
+        print(f"Current NEAR Price: ${data['price']:.2f}")
+        print(f"Data Confidence: {data['confidence']:.2%}")
+        print("✓ Market data integration verified")
+    except Exception as e:
+        print(f"❌ Market data integration failed: {str(e)}")
+        raise
+
+async def test_near_connection(connection):
+    """Test NEAR blockchain connection."""
+    print("\n⏳ Testing NEAR connection...")
+    try:
+        # Get account balance
+        balance = await connection.get_account_balance()
+        print(f"Account Balance: {balance} NEAR")
+        print("✓ NEAR connection verified")
+    except Exception as e:
+        print(f"❌ NEAR connection failed: {str(e)}")
+        raise
+
 async def verify_environment():
     """Verify all components needed for workshop."""
     try:
@@ -29,17 +82,22 @@ async def verify_environment():
         if not llm_api_key:
             raise ValueError("LLM_API_KEY environment variable is required")
 
+        print("\n🔧 Testing Components")
+        print("━━━━━━━━━━━━━━━━━━━━━━")
+
         # 1. Test LLM
         config = LLMConfig(
             provider="hyperbolic",
             api_key=llm_api_key,
-            model=os.getenv("LLM_MODEL", "meta-llama/Llama-3.3-70B-Instruct"),
-            api_url=os.getenv("HYPERBOLIC_API_URL", "https://api.hyperbolic.xyz/v1/chat/completions")
+            model=os.getenv("LLM_MODEL", "meta-llama/Meta-Llama-3-70B-Instruct"),
+            api_url=os.getenv("LLM_API_URL", "https://api.hyperbolic.xyz/v1")
         )
         provider = create_llm_provider(config)
+        await test_llm(provider)
         
         # 2. Test Market Data
         market = MarketDataManager()
+        await test_market_data(market)
         
         # 3. Test NEAR Connection
         near = NEARConnection(
@@ -47,12 +105,19 @@ async def verify_environment():
             account_id=account_id,
             private_key=private_key
         )
+        await test_near_connection(near)
         
-        print("✅ All systems verified!")
+        print("\n✅ All systems verified!")
         
     except Exception as e:
-        print(f"❌ Verification failed: {str(e)}")
+        print(f"\n❌ Verification failed: {str(e)}")
         raise
+    finally:
+        # Clean up resources
+        if 'provider' in locals():
+            await provider.close()
+        if 'market' in locals():
+            await market.close()
 
 if __name__ == "__main__":
     asyncio.run(verify_environment()) 

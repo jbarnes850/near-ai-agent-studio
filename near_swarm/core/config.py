@@ -46,5 +46,5 @@ def load_config() -> AgentConfig:
         llm_model=os.getenv('LLM_MODEL', 'meta-llama/Llama-3.3-70B-Instruct'),
         llm_temperature=float(os.getenv('LLM_TEMPERATURE', '0.7')),
         llm_max_tokens=int(os.getenv('LLM_MAX_TOKENS', '2000')),
-        api_url=os.getenv('HYPERBOLIC_API_URL')
+        api_url=os.getenv('LLM_API_URL')
     )

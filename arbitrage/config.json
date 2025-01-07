@@ -1,0 +1,10 @@
+{
+  "name": "arbitrage",
+  "roles": [
+    "market_analyzer",
+    "risk_manager",
+    "strategy_optimizer"
+  ],
+  "min_confidence": 0.7,
+  "min_votes": 2
+}
