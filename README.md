@@ -7,6 +7,8 @@ A production-ready starter kit for building AI-powered agents and multi-agent sw
 [![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](https://github.com/near/near-ai-agent-template/actions)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Hyperbolic](https://img.shields.io/badge/LLM-Hyperbolic-purple.svg)](https://hyperbolic.ai)
+[![PyPI version](https://badge.fury.io/py/near-swarm.svg)](https://badge.fury.io/py/near-swarm)
+[![Documentation Status](https://readthedocs.org/projects/near-swarm/badge/?version=latest)](https://near-swarm.readthedocs.io/en/latest/?badge=latest)
 
 ## 🧠 What is Swarm Intelligence?
 
@@ -35,7 +37,6 @@ cd near-swarm-intelligence
 ./scripts/quickstart.sh
 
 The quickstart script will:
-
 - Set up your Python environment
 - Install dependencies
 - Create a NEAR testnet account
@@ -43,6 +44,13 @@ The quickstart script will:
 - Create an example strategy
 - Guide you through using the CLI
 ```
+
+**Configure Environment**
+```bash
+# Copy and edit environment variables
+cp .env.example .env
+
+> **Tip**: Start with modifying the examples in `near_swarm/examples/` to understand the framework.
 
 > **Note**: This template runs on NEAR testnet by default for safe development.
 > Always test thoroughly before deploying to mainnet.
@@ -147,11 +155,84 @@ near-swarm-intelligence/
 │   ├── core/               # Core components
 │   │   ├── agent.py       # Base agent implementation
 │   │   ├── swarm_agent.py # Swarm intelligence
-│   │   └── ...
+│   │   ├── llm_provider.py # LLM integration
+│   │   ├── near_integration.py # NEAR blockchain integration
+│   │   └── config/        # Default configurations
+│   │       ├── agent_roles.json # Agent role definitions
+│   │       └── swarm_config.json # Swarm strategy configs
 │   └── examples/          # Example implementations
+│       ├── simple_strategy.py # Basic multi-agent example
+│       └── arbitrage_strategy.py # DEX arbitrage example
 ├── scripts/               # Utility scripts
 ├── tests/                # Test suite
 └── docs/                 # Documentation
+```
+
+## Examples
+
+### Simple Transfer Strategy
+The basic example (`simple_strategy.py`) demonstrates LLM-powered multi-agent decision making for a simple NEAR transfer:
+
+```python
+# Initialize specialized agents
+market_analyzer = SwarmAgent(config, SwarmConfig(role="market_analyzer"))
+risk_manager = SwarmAgent(config, SwarmConfig(role="risk_manager"))
+strategy_optimizer = SwarmAgent(config, SwarmConfig(role="strategy_optimizer"))
+
+# Form swarm network
+await market_analyzer.join_swarm([risk_manager, strategy_optimizer])
+
+# Example proposal with market context
+proposal = {
+    "type": "transfer",
+    "params": {
+        "recipient": "bob.testnet",
+        "amount": "0.1",
+        "token": "NEAR",
+        "market_context": {
+            "current_price": 5.45,
+            "24h_volume": "2.1M",
+            "market_trend": "upward"
+        }
+    }
+}
+```
+
+### DEX Arbitrage Strategy
+The advanced example (`arbitrage_strategy.py`) shows how to build a DEX arbitrage strategy with market data integration:
+
+```python
+# Get market data
+near_data = await market.get_token_price('near')
+dex_data = await market.get_dex_data('ref-finance')
+
+# Initialize specialized agents
+market_analyzer = SwarmAgent(config, SwarmConfig(
+    role="market_analyzer",
+    min_confidence=0.7
+))
+risk_manager = SwarmAgent(config, SwarmConfig(
+    role="risk_manager",
+    min_confidence=0.8  # Higher threshold for risk
+))
+
+# Analyze opportunity
+opportunity = await market.analyze_market_opportunity(
+    token_pair='NEAR/USDC',
+    amount=100,
+    max_slippage=0.01
+)
+
+# Get swarm consensus
+consensus = await market_analyzer.propose_action(
+    action_type="market_trade",
+    params={
+        "pair": "NEAR/USDC",
+        "action": "buy" if opportunity["analysis"]["is_opportunity"] else "skip",
+        "amount": 100,
+        "price_impact": opportunity["analysis"]["price_impact"]
+    }
+)
 ```
 
 ## Example: Creating Your First Agent

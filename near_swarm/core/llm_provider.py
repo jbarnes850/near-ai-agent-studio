@@ -20,7 +20,7 @@ class LLMConfig:
     """Configuration for LLM providers"""
     provider: str
     api_key: str
-    model: str = "meta-llama/Llama-3.3-70B-Instruct"
+    model: str = "meta-llama/Meta-Llama-3.3-70B-Instruct"
     temperature: float = 0.7
     max_tokens: int = 2000
     api_url: str = "https://api.hyperbolic.xyz/v1"
@@ -90,11 +90,12 @@ class HyperbolicProvider(LLMProvider):
         """Query Hyperbolic API using OpenAI SDK."""
         try:
             # Check if this is a test prompt
-            if "Respond with 'OK'" in prompt:
+            if "test_connection" in prompt.lower():
                 # For test prompts, use a simpler format
-                messages = [{"role": "user", "content": prompt}]
+                messages = [{"role": "user", "content": "Say 'Connected' if you can hear me."}]
                 temp = 0.1  # Lower temperature for test
                 tokens = 10  # Fewer tokens for test
+                response_format = None
             else:
                 # Enhanced system prompt for better context handling
                 system_prompt = """You are a specialized NEAR Protocol trading agent.
@@ -120,21 +121,22 @@ Always provide thorough reasoning for your decisions."""
                 ]
                 temp = temperature or self.config.temperature
                 tokens = max_tokens or self.config.max_tokens
+                response_format = {"type": "json_object"}
 
             # Make the API call using the OpenAI SDK
-            response = self.client.chat.completions.create(
+            completion = self.client.chat.completions.create(
                 model=self.config.model,
                 messages=messages,
                 temperature=temp,
                 max_tokens=tokens,
-                response_format={"type": "json_object"} if "OK" not in prompt else None
+                response_format=response_format
             )
 
-            content = response.choices[0].message.content
+            content = completion.choices[0].message.content
 
             # For test prompts, return as is
-            if "Respond with 'OK'" in prompt:
-                return content
+            if "test_connection" in prompt.lower():
+                return "OK" if "connected" in content.lower() else "Failed"
 
             # For regular prompts, validate JSON response
             try:

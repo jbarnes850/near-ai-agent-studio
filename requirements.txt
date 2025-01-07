@@ -62,4 +62,7 @@ pytest-mock>=3.11.1
 
 # Documentation
 mkdocs>=1.4.0
-mkdocs-material>=9.1.0 
+mkdocs-material>=9.1.0
+
+# Color Logging
+colorlog>=6.8.0 

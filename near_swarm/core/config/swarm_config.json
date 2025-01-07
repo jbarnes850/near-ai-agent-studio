@@ -1,0 +1,23 @@
+{
+  "arbitrage": {
+    "name": "arbitrage",
+    "roles": [
+      "market_analyzer",
+      "risk_manager",
+      "strategy_optimizer"
+    ],
+    "min_confidence": 0.7,
+    "min_votes": 2,
+    "description": "DEX arbitrage strategy with market data integration"
+  },
+  "transfer": {
+    "name": "transfer",
+    "roles": [
+      "market_analyzer",
+      "risk_manager"
+    ],
+    "min_confidence": 0.7,
+    "min_votes": 2,
+    "description": "Basic NEAR transfer with market context validation"
+  }
+} 

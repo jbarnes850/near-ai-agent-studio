@@ -14,11 +14,11 @@ async def test_llm(provider):
     try:
         # Simple test prompt
         response = await provider.query(
-            "Respond with 'OK' if you can understand this message.",
+            "test_connection",
             temperature=0.1,  # Low temperature for deterministic response
             max_tokens=10     # Small response size
         )
-        assert "OK" in response, "LLM response validation failed"
+        assert response == "OK", "LLM response validation failed"
         print("✓ LLM integration verified")
         
         # Test JSON response format with structured prompt
@@ -107,7 +107,7 @@ async def verify_environment():
         config = LLMConfig(
             provider="hyperbolic",
             api_key=llm_api_key,
-            model=os.getenv("LLM_MODEL", "meta-llama/Meta-Llama-3-70B-Instruct"),
+            model=os.getenv("LLM_MODEL", "meta-llama/Meta-Llama-3.3-70B-Instruct"),
             api_url=os.getenv("LLM_API_URL", "https://api.hyperbolic.xyz/v1")
         )
         provider = create_llm_provider(config)

@@ -1,12 +1,12 @@
 """
-NEAR Swarm Strategy Template
-Demonstrates multi-agent swarm decision making with market data integration.
+NEAR Swarm Arbitrage Strategy Example
+Demonstrates multi-agent swarm decision making for DEX arbitrage opportunities.
 """
 
 import asyncio
 import logging
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from dotenv import load_dotenv
 from near_swarm.core.market_data import MarketDataManager
 from near_swarm.core.agent import AgentConfig
@@ -16,12 +16,12 @@ from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load environment variables
-load_dotenv()
-
 def get_agent_config() -> AgentConfig:
     """Get agent configuration from environment."""
-    # Get required values with defaults
+    # Load environment variables
+    load_dotenv()
+    
+    # Get required values
     account_id = os.getenv('NEAR_ACCOUNT_ID')
     private_key = os.getenv('NEAR_PRIVATE_KEY')
     llm_api_key = os.getenv('LLM_API_KEY')
@@ -43,9 +43,19 @@ def get_agent_config() -> AgentConfig:
         llm_model=os.getenv('LLM_MODEL', 'meta-llama/Llama-3.3-70B-Instruct')
     )
 
-async def run_strategy():
-    """Run a multi-agent swarm strategy."""
-    # Initialize market data
+async def run_arbitrage_strategy() -> Dict[str, Any]:
+    """Run a multi-agent swarm strategy for DEX arbitrage.
+    
+    This example demonstrates:
+    1. Market data integration from multiple sources
+    2. Multi-agent swarm evaluation of trading opportunities
+    3. Risk-aware decision making with confidence scoring
+    4. Transparent reasoning from each agent
+    
+    Returns:
+        Dict[str, Any]: The consensus result from the swarm
+    """
+    # Initialize components
     market = MarketDataManager()
     agents = []
     
@@ -57,7 +67,7 @@ async def run_strategy():
         dex_data = await market.get_dex_data('ref-finance')
         logger.info(f"REF Finance TVL: ${dex_data['tvl']:,.2f}")
         
-        # 2. Initialize swarm agents with different roles
+        # 2. Initialize swarm agents
         config = get_agent_config()
         
         market_analyzer = SwarmAgent(
@@ -73,7 +83,7 @@ async def run_strategy():
             config=config,
             swarm_config=SwarmConfig(
                 role="risk_manager",
-                min_confidence=0.8
+                min_confidence=0.8  # Higher threshold for risk management
             )
         )
         agents.append(risk_manager)
@@ -94,7 +104,8 @@ async def run_strategy():
             "price_impact": opportunity["analysis"]["price_impact"],
             "market_data": {
                 "near_price": near_data["price"],
-                "dex_tvl": dex_data["tvl"]
+                "dex_tvl": dex_data["tvl"],
+                "timestamp": near_data["timestamp"]
             }
         }
 
@@ -111,6 +122,8 @@ async def run_strategy():
         logger.info(f"Confidence: {consensus.get('confidence', 0):.2%}")
         logger.info(f"Reasoning: {consensus.get('reasoning', 'No reasoning provided')}")
         
+        return consensus
+
     finally:
         # Cleanup
         await market.close()
@@ -118,4 +131,4 @@ async def run_strategy():
             await agent.close()
 
 if __name__ == "__main__":
-    asyncio.run(run_strategy())
+    asyncio.run(run_arbitrage_strategy()) 

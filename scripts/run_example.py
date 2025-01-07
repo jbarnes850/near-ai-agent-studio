@@ -48,11 +48,13 @@ async def run_example() -> Dict[str, Any]:
         print("\n🤖 Initializing Swarm Agents...")
         
         config = AgentConfig(
-            near_network=os.getenv("NEAR_NETWORK", "testnet"),
+            network=os.getenv("NEAR_NETWORK", "testnet"),
             account_id=os.getenv("NEAR_ACCOUNT_ID"),
             private_key=os.getenv("NEAR_PRIVATE_KEY"),
             llm_provider=os.getenv("LLM_PROVIDER", "hyperbolic"),
-            llm_api_key=os.getenv("LLM_API_KEY")
+            llm_api_key=os.getenv("LLM_API_KEY"),
+            llm_model=os.getenv("LLM_MODEL", "meta-llama/Meta-Llama-3-70B-Instruct"),
+            api_url=os.getenv("LLM_API_URL", "https://api.hyperbolic.xyz/v1")
         )
         
         market_analyzer = SwarmAgent(

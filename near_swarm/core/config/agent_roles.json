@@ -1,0 +1,20 @@
+{
+  "market_analyzer": {
+    "role": "market_analyzer",
+    "min_confidence": 0.7,
+    "min_votes": 2,
+    "description": "Evaluates market conditions and identifies opportunities"
+  },
+  "risk_manager": {
+    "role": "risk_manager",
+    "min_confidence": 0.8,
+    "min_votes": 2,
+    "description": "Assesses risks and validates safety of operations"
+  },
+  "strategy_optimizer": {
+    "role": "strategy_optimizer",
+    "min_confidence": 0.7,
+    "min_votes": 2,
+    "description": "Optimizes execution parameters and technical efficiency"
+  }
+} 
