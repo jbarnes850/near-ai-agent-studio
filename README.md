@@ -50,7 +50,9 @@ The quickstart script will:
 # Copy and edit environment variables
 cp .env.example .env
 
+```
 > **Tip**: Start with modifying the examples in `near_swarm/examples/` to understand the framework.
+
 
 > **Note**: This template runs on NEAR testnet by default for safe development.
 > Always test thoroughly before deploying to mainnet.
@@ -151,21 +153,21 @@ graph TB
 
 ```bash
 near-swarm-intelligence/
-├── near_swarm/              # Core package
-│   ├── core/               # Core components
-│   │   ├── agent.py       # Base agent implementation
-│   │   ├── swarm_agent.py # Swarm intelligence
-│   │   ├── llm_provider.py # LLM integration
-│   │   ├── near_integration.py # NEAR blockchain integration
-│   │   └── config/        # Default configurations
-│   │       ├── agent_roles.json # Agent role definitions
-│   │       └── swarm_config.json # Swarm strategy configs
-│   └── examples/          # Example implementations
-│       ├── simple_strategy.py # Basic multi-agent example
-│       └── arbitrage_strategy.py # DEX arbitrage example
-├── scripts/               # Utility scripts
-├── tests/                # Test suite
-└── docs/                 # Documentation
+├── near_swarm/              
+│   ├── core/               
+│   │   ├── agent.py       
+│   │   ├── swarm_agent.py 
+│   │   ├── llm_provider.py 
+│   │   ├── near_integration.py 
+│   │   └── config/        
+│   │       ├── agent_roles.json 
+│   │       └── swarm_config.json 
+│   └── examples/         
+│       ├── simple_strategy.py 
+│       └── arbitrage_strategy.py 
+├── scripts/              
+├── tests/               
+└── docs/                
 ```
 
 ## Examples
