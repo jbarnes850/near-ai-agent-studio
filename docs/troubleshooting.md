@@ -1,266 +1,258 @@
 # Troubleshooting Guide
 
-## Common Issues and Solutions
+This guide helps you resolve common issues when working with the NEAR Swarm Intelligence framework.
 
-### Setup Issues
+## Installation Issues
 
-#### Python Environment
+### Python Version Error
 
+**Problem**: Error about Python version compatibility.
+
+**Solution**:
+1. Check your Python version:
 ```bash
-❌ Error: Python 3 is required but not found
+python --version
 ```
 
-**Solution:**
-
-1. Install Python 3:
-
-   - macOS: `brew install python3`
-   - Ubuntu: `sudo apt install python3`
-   - Windows: Download from python.org
-
-#### NEAR CLI
-
+2. Install Python 3.12+:
 ```bash
-❌ Error: near command not found
+# macOS
+brew install python@3.12
+
+# Ubuntu
+sudo apt update
+sudo apt install python3.12
 ```
 
-**Solution:**
+### Package Dependencies
 
-1. Install Node.js first:
+**Problem**: Missing dependencies or version conflicts.
 
-   ```bash
-   curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-   sudo apt-get install -y nodejs
-   ```
-
-2. Install NEAR CLI:
-
-   ```bash
-   npm install -g near-cli
-   ```
-
-#### Wallet Creation
-
+**Solution**:
+1. Update pip:
 ```bash
-❌ Error: Failed to create NEAR account
+python -m pip install --upgrade pip
 ```
 
-**Solution:**
-
-1. Check internet connection
-2. Verify testnet is operational: https://explorer.testnet.near.org
-3. Try manual creation:
-
-   ```bash
-   near create-account your-account.testnet --masterAccount testnet
-   ```
-
-### Runtime Issues
-
-#### Market Data
-
+2. Install with dependencies:
 ```bash
-❌ Error: Failed to fetch market data
+pip install near-swarm[all]
 ```
 
-**Solution:**
+## Configuration Issues
 
-1. Check API endpoints in `.env`
-2. Verify internet connection
-3. Try with backup data source:
+### Environment Variables
 
-   ```python
-   # In your strategy
-   try:
-       price = await self.market.get_token_price("NEAR")
-   except:
-       price = await self.market.get_backup_price("NEAR")
-   ```
+**Problem**: "Environment variable not set" errors.
 
-#### Memory Management
-
+**Solution**:
+1. Check `.env` file exists:
 ```bash
-❌ Error: Memory limit exceeded
+ls -la .env
 ```
 
-**Solution:**
-
-1. Adjust memory settings in `.env`:
-
-   ```env
-   MAX_MEMORY_ENTRIES=500
-   MEMORY_PRUNING_THRESHOLD=0.7
-   ```
-
-2. Implement custom pruning:
-
-   ```python
-   await memory.prune(
-       category="market_data",
-       older_than_hours=24
-   )
-   ```
-
-#### Gas Issues
-
+2. Verify required variables:
 ```bash
-❌ Error: Insufficient gas
+NEAR_NETWORK=testnet
+NEAR_ACCOUNT_ID=your-account.testnet
+NEAR_PRIVATE_KEY=your-private-key
+LLM_PROVIDER=hyperbolic
+LLM_API_KEY=your-api-key
+LLM_MODEL=deepseek-ai/DeepSeek-V3
 ```
 
-**Solution:**
+3. Load variables:
+```bash
+source .env
+```
 
-1. Adjust gas settings:
+### API Key Issues
 
-   ```python
-   await near.call_contract(
-       contract_id="contract.testnet",
-       method_name="method",
-       args={},
-       gas=300_000_000_000_000  # 300 TGas
-   )
-   ```
+**Problem**: "Invalid API key" or authentication errors.
 
-2. Use gas estimation:
+**Solution**:
+1. Verify API key format
+2. Check key permissions
+3. Ensure key is active
+4. Try regenerating key
 
-   ```python
-   gas = await near.estimate_gas(
-       contract_id="contract.testnet",
-       method_name="method",
-       args={}
-   )
-   gas = int(gas * 1.2)  # Add 20% buffer
-   ```
+## Runtime Issues
 
-## Customization Examples
+### Connection Errors
 
-### 1. Custom Market Data Source
+**Problem**: Cannot connect to NEAR network or API services.
 
+**Solution**:
+1. Check network connection
+2. Verify NEAR RPC endpoint:
 ```python
-from src.market_data import MarketDataManager
+# In your code
+from near_swarm.core.near import NearConnection
 
-class CustomMarketData(MarketDataManager):
-    async def get_token_price(self, token: str) -> float:
-        # Your custom implementation
-        price = await self.fetch_from_custom_source(token)
-        await self.cache.set(f"price_{token}", price)
-        return price
-        
-    async def fetch_from_custom_source(self, token: str) -> float:
-        # Implement your data fetching logic
-        pass
+connection = NearConnection(network="testnet")
+await connection.health_check()
 ```
 
-### 2. Custom Strategy Template
-
+3. Test API connectivity:
 ```python
-from near_swarm.core.agent import BaseAgent
+from near_swarm.core.llm_provider import LLMProvider
 
-class CustomStrategy(BaseAgent):
-    async def analyze_opportunity(self, pair: str):
-        # Get market data
-        price_data = await self.market.get_market_stats(pair)
-        
-        # Your custom analysis
-        if self._is_profitable(price_data):
-            return {
-                "action": "execute",
-                "params": self._prepare_execution(price_data)
-            }
-        return None
-        
-    def _is_profitable(self, data: dict) -> bool:
-        # Your profitability logic
-        return data['profit_potential'] > self.config.min_profit
-        
-    def _prepare_execution(self, data: dict) -> dict:
-        # Your execution preparation
-        return {
-            "amount": self.calculate_position_size(data['profit_potential']),
-            "params": data['execution_params']
-        }
+provider = LLMProvider()
+await provider.test_connection()
 ```
 
-### 3. Custom Memory Storage
+### Memory Issues
 
+**Problem**: Out of memory errors during agent operations.
+
+**Solution**:
+1. Reduce batch sizes
+2. Implement pagination
+3. Clear cache regularly:
 ```python
-from near_swarm.core.memory_manager import MemoryManager
-import redis
+from near_swarm.core.market_data import MarketDataManager
 
-class RedisMemoryManager(MemoryManager):
-    def __init__(self, redis_url: str):
-        self.redis = redis.from_url(redis_url)
-        
-    async def store(self, category: str, data: dict):
-        key = f"{category}:{data['timestamp']}"
-        await self.redis.set(key, json.dumps(data))
-        
-    async def retrieve(self, category: str, limit: int = 10):
-        keys = await self.redis.keys(f"{category}:*")
-        data = []
-        for key in keys[:limit]:
-            value = await self.redis.get(key)
-            data.append(json.loads(value))
-        return data
+market_data = MarketDataManager()
+await market_data.clear_cache()
 ```
 
-## Best Practices
+### Performance Issues
 
-### 1. Error Handling
+**Problem**: Slow response times or high latency.
 
+**Solution**:
+1. Enable caching:
 ```python
-try:
-    result = await self.execute_trade(params)
-except NEARException as e:
-    logger.error(f"NEAR error: {str(e)}")
-    await self.handle_near_error(e)
-except MarketDataException as e:
-    logger.error(f"Market data error: {str(e)}")
-    await self.use_backup_data()
-except Exception as e:
-    logger.error(f"Unexpected error: {str(e)}")
-    await self.emergency_shutdown()
-```
-
-### 2. Logging
-
-```python
-import structlog
-
-logger = structlog.get_logger()
-
-logger.info("strategy_started", 
-    strategy="arbitrage",
-    pairs=["NEAR/USDC"],
-    timestamp=datetime.now().isoformat()
+market_data = MarketDataManager(
+    cache_ttl=300,  # 5 minutes
+    rate_limit=10   # 10 requests/minute
 )
 ```
 
-### 3. Testing
-
+2. Optimize batch sizes:
 ```python
-# test_strategy.py
-async def test_opportunity_analysis():
-    strategy = CustomStrategy(config)
-    opportunity = await strategy.analyze_opportunity("NEAR/USDC")
-    
-    assert opportunity is not None
-    assert opportunity['action'] == "execute"
-    assert 0 < opportunity['params']['amount'] <= config.max_position
+# Process in smaller batches
+async def process_batch(items, batch_size=10):
+    for i in range(0, len(items), batch_size):
+        batch = items[i:i + batch_size]
+        await process_items(batch)
+```
+
+## Agent Issues
+
+### Consensus Failures
+
+**Problem**: Agents cannot reach consensus.
+
+**Solution**:
+1. Check confidence thresholds:
+```python
+swarm_config = SwarmConfig(
+    min_confidence=0.7,  # Adjust as needed
+    min_votes=2
+)
+```
+
+2. Review agent logs:
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+3. Monitor agent states:
+```python
+async def monitor_agents(swarm):
+    states = await swarm.get_agent_states()
+    for agent_id, state in states.items():
+        print(f"Agent {agent_id}: {state}")
+```
+
+### Invalid Responses
+
+**Problem**: Agents return unexpected or invalid responses.
+
+**Solution**:
+1. Validate inputs:
+```python
+from pydantic import BaseModel, Field
+
+class MarketAnalysis(BaseModel):
+    symbol: str
+    price: float = Field(gt=0)
+    confidence: float = Field(ge=0, le=1)
+```
+
+2. Add error handling:
+```python
+try:
+    result = await agent.analyze_market(symbol)
+except ValueError as e:
+    logger.error(f"Invalid market data: {e}")
+    result = None
+```
+
+## Common Error Messages
+
+### "No module named 'near_swarm'"
+
+**Solution**:
+1. Check installation:
+```bash
+pip list | grep near-swarm
+```
+
+2. Install in development mode:
+```bash
+pip install -e .
+```
+
+### "LLM API rate limit exceeded"
+
+**Solution**:
+1. Implement rate limiting:
+```python
+from near_swarm.core.utils import RateLimiter
+
+limiter = RateLimiter(max_calls=10, time_window=60)
+async with limiter:
+    result = await llm.generate(prompt)
+```
+
+2. Use caching:
+```python
+from near_swarm.core.cache import Cache
+
+cache = Cache()
+result = await cache.get_or_set(
+    key="market_analysis",
+    func=analyze_market,
+    ttl=300
+)
 ```
 
 ## Getting Help
 
-1. Check the logs:
+1. Check documentation:
+   - [Tutorial](tutorial.md)
+   - [Core Concepts](core-concepts.md)
+   - [API Reference](api-reference.md)
 
-   ```bash
-   tail -f logs/strategy.log
-   ```
+2. Search issues:
+   - [GitHub Issues](https://github.com/jbarnes850/near_swarm_intelligence/issues)
 
-2. Run diagnostics:
+3. Join community:
+   - [Discord](https://discord.gg/near)
+   - [Forum](https://gov.near.org)
 
-   ```bash
-   ./scripts/verify_all.sh
-   ```
-3. Join our Discord community: https://discord.gg/near
+4. Debug tools:
+```python
+# Enable debug logging
+import logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
-4. Open an issue: https://github.com/jbarnes850/near-swarm-intelligence/issues
+# Use debug mode
+agent = SwarmAgent(config, debug=True)
+```

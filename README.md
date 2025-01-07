@@ -291,6 +291,117 @@ Run the test suite:
 pytest tests/ -v
 ```
 
+## Chat Mode
+
+The NEAR Swarm Intelligence Framework includes a powerful interactive chat interface for communicating with your agents:
+
+```bash
+# Start chatting with your AI assistant
+./scripts/chat
+
+# Or use specific options if needed:
+./scripts/chat --agent market_analyzer  # Chat with market analysis agent
+./scripts/chat --multi-agent            # Enable multi-agent mode
+./scripts/chat --verbose               # Show detailed reasoning
+```
+
+The chat interface provides:
+- Natural language interaction with AI agents
+- Market analysis and trading insights
+- Risk assessment and portfolio management
+- Strategy optimization suggestions
+
+Just type your questions or commands naturally, for example:
+- "What's the current market sentiment for NEAR?"
+- "Analyze the trading volume in the last 24 hours"
+- "Help me understand the risks in my current position"
+
+Use `/help` to see all available commands.
+
+### Chat Commands
+
+- **Market Analysis**
+  - `/market [symbol]` - Get market analysis
+  - `/trend [timeframe]` - Get trend analysis
+  - `/volume [symbol]` - Volume analysis
+
+- **Risk Management**
+  - `/risk [action]` - Risk assessment
+  - `/balance` - Check portfolio balance
+  - `/positions` - List open positions
+
+- **Strategy**
+  - `/strategy [action]` - Strategy suggestions
+  - `/portfolio` - Portfolio overview
+
+- **Development Tools**
+  - `/ws` - Manage workspace configuration
+  - `/env` - Configure environment variables
+  - `/config` - View/modify settings
+  - `/reason` - Toggle step-by-step reasoning
+  - `/multiline` - Toggle multiline input mode
+  - `/save` - Save chat history
+  - `/load` - Load chat history
+
+### Natural Language Interaction
+
+Agents understand natural language queries:
+```bash
+> What's the current market sentiment for NEAR?
+> Should I adjust my portfolio based on current trends?
+> Help me implement a simple arbitrage strategy
+```
+
+### Workspace Management
+
+```bash
+# Create a workspace
+> /ws create trading_bot
+Description: My NEAR trading bot workspace
+
+# Configure environment
+> /env set NEAR_NETWORK=mainnet
+> /env set RISK_THRESHOLD=0.7
+
+# Export workspace
+> /export my_workspace.json
+
+# Import in another session
+> /import my_workspace.json
+```
+
+### Structured Outputs
+
+Agents provide structured responses using Pydantic models:
+
+```python
+# Market Analysis Response
+{
+    "price": 5.45,
+    "sentiment": "bullish",
+    "volume_24h": "2.1M",
+    "trend": "upward",
+    "confidence": 0.85,
+    "reasoning": "Strong buying pressure...",
+    "recommendations": [
+        "Consider increasing position",
+        "Set stop loss at $5.20"
+    ]
+}
+```
+
+### Multi-Agent Swarm Mode
+
+Enable multiple agents to collaborate:
+```bash
+near-swarm chat -i --multi-agent --agents market_analyzer risk_manager strategy_optimizer
+```
+
+Each agent contributes its expertise:
+- Market Analyzer evaluates opportunities
+- Risk Manager assesses potential risks
+- Strategy Optimizer suggests improvements
+
 ## Documentation
 
 - [Core Concepts](docs/core-concepts.md)

@@ -53,7 +53,8 @@ class SwarmAgent(Agent):
             model=config.llm_model,
             temperature=config.llm_temperature,
             max_tokens=config.llm_max_tokens,
-            api_url=api_url  # Now we know this is not None
+            api_url=api_url,  # Now we know this is not None
+            system_prompt=config.system_prompt
         ))
         self._is_running = False
         logger.info(f"Initialized swarm agent with role: {swarm_config.role}")

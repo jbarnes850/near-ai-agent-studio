@@ -1,244 +1,237 @@
-# Building Multi-Agent Systems with NEAR Swarm Intelligence
+# Developer Tutorial
 
-This tutorial guides you through creating and managing AI-powered swarm agents on NEAR testnet. You'll learn how to build collaborative multi-agent systems that leverage LLM-based decision making for intelligent consensus.
+This tutorial will guide you through building your first AI-powered trading agent using the NEAR Swarm Intelligence framework.
 
 ## Prerequisites
 
 - Python 3.12+
+- [Hyperbolic API Key](https://hyperbolic.ai)
 - Basic understanding of NEAR Protocol
-- Familiarity with async Python
 
-## Quick Start
-
-1. Clone and setup the repository:
+## 1. Basic Setup
 
 ```bash
-git clone https://github.com/jbarnes850/near_swarm_intelligence
-cd near_swarm_intelligence
-./scripts/quickstart.sh
+# Install the framework
+pip install near-swarm
+
+# Create a new project
+mkdir my-trading-bot
+cd my-trading-bot
+
+# Initialize environment
+cp .env.example .env
+# Edit .env with your credentials
 ```
 
-2. The quickstart script will:
-   - Set up your Python virtual environment
-   - Install dependencies from requirements.txt
-   - Create a NEAR testnet account using create_near_wallet.sh
-   - Configure environment variables
-   - Set up Hyperbolic AI LLM integration
+## 2. Your First Agent
 
-## Core Concepts
-
-### What is Swarm Intelligence?
-
-Swarm intelligence in this framework represents collaborative decision-making where multiple specialized agents work together to achieve better outcomes than any single agent could alone.
-
-Key components:
-- Multiple agents with different expertise
-- Consensus-based decision making
-- LLM-powered reasoning
-- Blockchain integration
-
-### Agent Types
-
-1. **Market Analyzer**
-   - Analyzes market conditions and price data
-   - Identifies trading opportunities
-   - Initiates swarm proposals
-
-2. **Risk Manager**
-   - Evaluates transaction safety
-   - Assesses potential risks and exposure
-   - Validates proposals against risk parameters
-
-3. **Strategy Optimizer**
-   - Fine-tunes execution parameters
-   - Optimizes timing and efficiency
-   - Improves overall strategy performance
-
-## Building Your First Agent
-
-Let's create a simple market analyzer agent:
+Create `simple_agent.py`:
 
 ```python
-from near_swarm.core.agent import Agent, AgentConfig
+import asyncio
+from near_swarm.core.agent import AgentConfig
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
 
-async def create_market_analyzer():
-    # Basic configuration
+async def main():
+    # Configure agent
     config = AgentConfig(
-        near_network="testnet",
+        network="testnet",
         account_id="your-account.testnet",
         private_key="your-private-key",
         llm_provider="hyperbolic",
-        llm_api_key="your-api-key"
+        llm_api_key="your-api-key",
+        llm_model="deepseek-ai/DeepSeek-V3"
     )
-
-    # Swarm-specific configuration
-    swarm_config = SwarmConfig(
-        role="market_analyzer",
-        min_confidence=0.7,
-        min_votes=2,
-        timeout=1.0
+    
+    # Create market analyzer
+    agent = SwarmAgent(
+        config,
+        SwarmConfig(
+            role="market_analyzer",
+            min_confidence=0.7
+        )
     )
-
-    # Create the agent
-    agent = SwarmAgent(config, swarm_config)
+    
+    # Start agent
     await agent.start()
     
-    return agent
+    try:
+        # Example: Analyze NEAR market
+        result = await agent.evaluate_proposal({
+            "type": "market_analysis",
+            "params": {
+                "symbol": "NEAR",
+                "market_context": {
+                    "current_price": 5.45,
+                    "24h_volume": "2.1M",
+                    "market_trend": "upward"
+                }
+            }
+        })
+        
+        print(f"Decision: {'Yes' if result['decision'] else 'No'}")
+        print(f"Confidence: {result['confidence']:.2%}")
+        print(f"Reasoning: {result['reasoning']}")
+        
+    finally:
+        await agent.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-## Creating a Swarm
+## 3. Natural Language Interface
 
-Now let's create a simple swarm with multiple agents:
+Create `chat_bot.py`:
 
 ```python
-async def create_swarm():
-    # Create agents
-    market_analyzer = await create_market_analyzer()
+from near_swarm.cli.chat import SwarmChat
+import asyncio
+
+async def main():
+    # Initialize chat interface
+    chat = SwarmChat(
+        agent_type="chat_assistant",
+        verbose=True
+    )
+    
+    # Setup and start
+    await chat.setup()
+    
+    try:
+        # Example: Process natural language query
+        await chat._process_input(
+            "What's the current market sentiment for NEAR?"
+        )
+    finally:
+        await chat.cleanup()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## 4. Multi-Agent System
+
+Create `swarm_system.py`:
+
+```python
+import asyncio
+from near_swarm.core.agent import AgentConfig
+from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
+
+async def main():
+    # Create base config
+    config = AgentConfig(
+        network="testnet",
+        account_id="your-account.testnet",
+        private_key="your-private-key",
+        llm_provider="hyperbolic",
+        llm_api_key="your-api-key",
+        llm_model="deepseek-ai/DeepSeek-V3"
+    )
+    
+    # Initialize specialized agents
+    market_analyzer = SwarmAgent(
+        config,
+        SwarmConfig(role="market_analyzer", min_confidence=0.7)
+    )
     
     risk_manager = SwarmAgent(
-        AgentConfig(),  # Using default config
+        config,
         SwarmConfig(role="risk_manager", min_confidence=0.8)
     )
     
     strategy_optimizer = SwarmAgent(
-        AgentConfig(),
+        config,
         SwarmConfig(role="strategy_optimizer", min_confidence=0.7)
     )
-
+    
+    # Start all agents
+    for agent in [market_analyzer, risk_manager, strategy_optimizer]:
+        await agent.start()
+    
     # Form swarm
     await market_analyzer.join_swarm([risk_manager, strategy_optimizer])
     
-    return market_analyzer
-```
-
-## Implementing a Strategy
-
-Let's implement a simple trading strategy:
-
-```python
-async def run_trading_strategy(market_analyzer):
-    # Define a trading proposal
-    proposal = {
-        "type": "transaction",
-        "params": {
-            "action": "swap",
-            "token_in": "NEAR",
-            "token_out": "USDC",
-            "amount": "10",
-            "min_output": "9.5"
-        }
-    }
-
-    # Get swarm consensus
-    result = await market_analyzer.propose_action(
-        action_type=proposal["type"],
-        params=proposal["params"]
-    )
-
-    if result["consensus"]:
-        print("Executing approved transaction...")
-        print(f"Confidence: {result['confidence']}")
-        print(f"Supporting agents: {result['supporting_agents']}")
+    try:
+        # Example: Get swarm consensus on a trade
+        result = await market_analyzer.propose_action(
+            action_type="market_trade",
+            params={
+                "symbol": "NEAR",
+                "action": "buy",
+                "amount": 100,
+                "market_context": {
+                    "current_price": 5.45,
+                    "24h_volume": "2.1M",
+                    "market_trend": "upward"
+                }
+            }
+        )
         
-        # Execute the transaction
-        tx_result = await market_analyzer.execute_action(proposal)
-        print(f"Transaction result: {tx_result}")
+        print("\nSwarm Decision:")
+        print(f"Consensus: {'Reached' if result['consensus'] else 'Not Reached'}")
+        print(f"Approval Rate: {result['approval_rate']:.2%}")
+        print("\nReasoning from each agent:")
+        for reason in result['reasons']:
+            print(f"- {reason}")
+            
+    finally:
+        # Cleanup
+        for agent in [market_analyzer, risk_manager, strategy_optimizer]:
+            await agent.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-## Advanced Features
+## 5. Production Considerations
 
-### Memory Management
-
-Agents can maintain state and learn from past decisions:
+### Error Handling
 
 ```python
-from near_swarm.core.memory_manager import MemoryManager
+try:
+    result = await agent.evaluate_proposal(proposal)
+except Exception as e:
+    logger.error(f"Evaluation failed: {str(e)}")
+    # Implement fallback strategy
+    result = await fallback_strategy(proposal)
+```
 
-memory = MemoryManager()
-await memory.store_decision(
-    agent_id="market_analyzer_1",
-    decision={
-        "type": "swap",
-        "confidence": 0.85,
-        "outcome": "success"
-    }
+### Rate Limiting
+
+```python
+from near_swarm.core.market_data import MarketDataManager
+
+market_data = MarketDataManager(
+    cache_ttl=300,  # Cache for 5 minutes
+    rate_limit=10   # Max 10 requests per minute
 )
-
-# Retrieve past decisions
-past_decisions = await memory.get_decisions("market_analyzer_1")
 ```
 
-### Market Data Integration
-
-Access real-time market data:
+### Monitoring
 
 ```python
-from near_swarm.core.market_data import MarketDataProvider
-
-market_data = MarketDataProvider()
-price_data = await market_data.get_price("NEAR/USDC")
-volume_data = await market_data.get_volume("NEAR/USDC", timeframe="1h")
+# In .env
+LOG_LEVEL=INFO
+ENABLE_TELEMETRY=true
+PROMETHEUS_PORT=9090
 ```
 
-## Example Strategies
+### Security
 
-The repository includes several example strategies:
-
-1. Simple Strategy (examples/simple_strategy.py)
-2. Arbitrage Strategy (examples/arbitrage.py)
-3. Swarm Trading Strategy (examples/swarm_trading.py)
-
-Review these examples to understand different approaches to multi-agent system design.
-
-## Testing Your Agents
-
-Run the test suite:
-
-```bash
-pytest tests/ -v
+1. Never commit `.env` files
+2. Use environment variables for secrets
+3. Implement proper error handling
+4. Set reasonable limits:
+```python
+MAX_POSITION_SIZE=10000
+EMERGENCY_SHUTDOWN_THRESHOLD=0.05
 ```
-
-Key test areas:
-- Agent initialization
-- Swarm consensus
-- Transaction execution
-- Market data integration
-
-## Best Practices
-
-1. **Start Simple**
-   - Begin with the simple_strategy example
-   - Add complexity gradually
-   - Test thoroughly on testnet
-
-2. **Error Handling**
-   - Handle API failures gracefully
-   - Implement proper cleanup
-   - Log important decisions
-
-3. **Security**
-   - Never commit private keys
-   - Use environment variables
-   - Implement transaction limits
-
-4. **Testing**
-   - Write comprehensive tests
-   - Use testnet for development
-   - Monitor agent performance
 
 ## Next Steps
 
-1. Explore the example strategies in `examples/`
-2. Customize agent roles and evaluation logic
-3. Implement your own consensus mechanisms
-4. Create advanced trading strategies
-
-## Resources
-
-- [NEAR Documentation](https://docs.near.org)
-- [Project README](../README.md)
-- [Core Concepts](core-concepts.md)
-- [Troubleshooting Guide](troubleshooting.md)
-
-Remember: Always test thoroughly on testnet before deploying to mainnet. 
+1. Review [Core Concepts](core-concepts.md)
+2. Explore example implementations in `near_swarm/examples/`
+3. Join our developer community
+4. Contribute to the framework 
