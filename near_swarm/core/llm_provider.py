@@ -20,10 +20,11 @@ class LLMConfig:
     """Configuration for LLM providers"""
     provider: str
     api_key: str
-    model: str = "meta-llama/Meta-Llama-3.3-70B-Instruct"
+    model: str = "deepseek-ai/DeepSeek-V3"
     temperature: float = 0.7
     max_tokens: int = 2000
     api_url: str = "https://api.hyperbolic.xyz/v1"
+    system_prompt: Optional[str] = None
 
     def validate(self) -> None:
         """Validate configuration"""
@@ -97,8 +98,8 @@ class HyperbolicProvider(LLMProvider):
                 tokens = 10  # Fewer tokens for test
                 response_format = None
             else:
-                # Enhanced system prompt for better context handling
-                system_prompt = """You are a specialized NEAR Protocol trading agent.
+                # Use provided system prompt or default
+                system_prompt = self.config.system_prompt or """You are a specialized NEAR Protocol trading agent.
 Your responses must always be in valid JSON format with the following structure:
 {
     "decision": boolean,      // Your decision to approve or reject
@@ -157,7 +158,6 @@ Always provide thorough reasoning for your decisions."""
         except Exception as e:
             logger.error(f"Error querying API: {str(e)}")
             raise
-
     async def batch_query(
         self,
         prompts: List[str],
@@ -193,3 +193,4 @@ def create_llm_provider(config: LLMConfig) -> LLMProvider:
         return HyperbolicProvider(config)
     else:
         raise ValueError(f"Unsupported LLM provider: {config.provider}")
+

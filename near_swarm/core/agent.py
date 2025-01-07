@@ -19,10 +19,11 @@ class AgentConfig:
     private_key: str = ""
     llm_provider: str = "hyperbolic"
     llm_api_key: str = ""
-    llm_model: str = "meta-llama/Llama-3.3-70B-Instruct"
+    llm_model: str = "deepseek-ai/DeepSeek-V3"
     llm_temperature: float = 0.7
     llm_max_tokens: int = 2000
     api_url: Optional[str] = None
+    system_prompt: Optional[str] = None
 
     def validate(self) -> None:
         """Validate configuration."""

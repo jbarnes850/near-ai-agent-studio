@@ -1,266 +1,200 @@
 # Core Concepts
 
-This document explains the fundamental concepts behind the NEAR Swarm Intelligence framework.
+## Overview
 
-## Swarm Intelligence Overview
+NEAR Swarm Intelligence is a framework for building AI-powered multi-agent systems that can collaborate to make intelligent decisions. The framework leverages large language models (LLMs) through the Hyperbolic API and integrates with the NEAR blockchain for secure and transparent operations.
 
-Swarm intelligence is a collective behavior of decentralized, self-organized agents working together to make decisions. In our framework, this concept is applied to DeFi operations where multiple specialized agents collaborate to:
+## Key Components
 
-1. Analyze market conditions
-2. Assess risks
-3. Identify opportunities
-4. Execute strategies
+### 1. Agents
 
-## Agent System
+Agents are autonomous entities that can:
+- Process information using LLMs
+- Make decisions based on predefined criteria
+- Collaborate with other agents
+- Execute actions on the NEAR blockchain
 
-### Agent Roles
-
-Each agent in the swarm has a specialized role:
+#### Agent Types
 
 1. **Market Analyzer**
-   - Analyzes market conditions
-   - Monitors liquidity and volume
-   - Tracks price movements
-   - Confidence based on market stability
+   - Analyzes market data and trends
+   - Identifies trading opportunities
+   - Evaluates market conditions
 
 2. **Risk Manager**
-   - Evaluates position risks
-   - Monitors exposure limits
-   - Assesses market risks
-   - Confidence based on risk metrics
+   - Assesses transaction risks
+   - Enforces position limits
+   - Validates proposals against risk parameters
 
 3. **Strategy Optimizer**
-   - Optimizes execution parameters
-   - Adjusts to market conditions
-   - Fine-tunes strategies
-   - Confidence based on historical performance
+   - Fine-tunes execution parameters
+   - Optimizes timing and efficiency
+   - Suggests strategy improvements
 
-### Agent Properties
+4. **Chat Assistant**
+   - Provides natural language interface
+   - Explains agent decisions
+   - Helps users understand system capabilities
 
-Each agent has:
+### 2. Swarm Intelligence
 
-```python
-@dataclass
-class AgentReputation:
-    agent_id: str
-    role: str
-    success_rate: float
-    total_operations: int
-    successful_operations: int
-    average_confidence: float
-```
+The swarm represents a collaborative decision-making system where:
+- Multiple agents work together
+- Consensus is required for actions
+- Different expertise is combined
+- Decisions are more robust
 
-## Consensus Mechanism
-
-### Voting Process
-
-1. **Vote Collection**
+#### Consensus Mechanism
 
 ```python
-@dataclass
-class Vote:
-    agent_id: str
-    decision: bool
-    confidence: float  # 0.0 to 1.0
-    reasoning: str
-```
-
-2. **Consensus Strategies**
-
-- **Simple Majority**
-  - Basic voting with confidence threshold
-  - Each agent gets equal weight
-  - Requires minimum participation
-
-- **Reputation Weighted**
-  - Weights votes by agent reputation
-  - Better performing agents have more influence
-  - Adapts over time
-
-- **Confidence Weighted**
-  - Weights votes by confidence scores
-  - Higher confidence = more influence
-  - Rewards careful decision making
-
-- **Hybrid**
-  - Combines reputation and confidence
-  - Balanced influence model
-  - Most sophisticated approach
-
-### Consensus Formula
-
-For hybrid consensus:
-
-```python
-weight = (reputation_weight * reputation + 
-         confidence_weight * confidence)
-```
-
-## Memory Management
-
-### Storage System
-
-1. **File-based Storage**
-
-```python
-class FileStorage:
-    def save(self, key: str, value: Any) -> bool
-    def load(self, key: str) -> Optional[Any]
-    def delete(self, key: str) -> bool
-```
-
-2. **Data Categories**
-
-- Agent reputations
-- Strategy outcomes
-- Market data cache
-- Performance metrics
-
-### Learning System
-
-1. **Reputation Updates**
-
-```python
-async def update_reputation(
-    agent_id: str,
-    success: bool,
-    confidence: float
-) -> AgentReputation
-```
-
-2. **Outcome Recording**
-
-```python
-async def record_outcome(
-    strategy_id: str,
-    success: bool,
-    metrics: Dict[str, Any]
-) -> None
-```
-
-## Market Data Integration
-
-### DeFi Llama Integration
-
-1. **Data Points**
-
-- TVL (Total Value Locked)
-- Volume data
-- Price information
-- Protocol metrics
-
-2. **Caching System**
-
-```python
-class MarketDataProvider:
-    def __init__(self, cache_duration: int = 300):
-        self.cache: Dict[str, Any] = {}
-```
-
-### Market Analysis
-
-1. **Metrics Calculation**
-
-```python
-async def analyze_market_conditions(
-    protocols: List[str],
-    tokens: List[str]
-) -> Dict[str, Any]
-```
-
-2. **Risk Assessment**
-
-```python
-async def analyze_risk(
-    token: str,
-    position_size: float
-) -> Dict[str, Any]
-```
-
-## Strategy Development
-
-### Strategy Lifecycle
-
-1. **Initialization**
-   - Configure parameters
-   - Initialize components
-   - Set up monitoring
-
-2. **Execution Loop**
-   - Analyze opportunities
-   - Collect votes
-   - Reach consensus
-   - Execute actions
-   - Record outcomes
-
-3. **Learning Loop**
-   - Update reputations
-   - Adjust parameters
-   - Optimize performance
-
-### Example Strategy Structure
-
-```python
-class Strategy:
-    def __init__(self):
-        self.market_data = MarketDataProvider()
-        self.memory = SwarmMemory()
-        self.consensus = ConsensusEngine(
-            ConsensusConfig(
-                strategy=ConsensusStrategy.HYBRID
-            )
-        )
+class SwarmConsensus:
+    def __init__(self, min_confidence=0.7, min_votes=2):
+        self.min_confidence = min_confidence
+        self.min_votes = min_votes
     
-    async def execute(self):
-        opportunity = await self.analyze()
-        votes = await self.collect_votes()
-        consensus = await self.reach_consensus()
-        if consensus['consensus_reached']:
-            await self.execute_action()
+    def evaluate(self, votes):
+        if len(votes) < self.min_votes:
+            return False
+            
+        confidence = sum(v['confidence'] for v in votes) / len(votes)
+        return confidence >= self.min_confidence
+```
+
+### 3. Market Integration
+
+The framework provides tools for:
+- Real-time price data
+- Volume analysis
+- Order book depth
+- Historical trends
+
+#### Example Market Data Flow
+
+```python
+class MarketDataManager:
+    async def get_market_context(self, symbol):
+        return {
+            "price": await self.get_price(symbol),
+            "volume": await self.get_volume(symbol),
+            "trend": await self.get_trend(symbol),
+            "depth": await self.get_order_book(symbol)
+        }
+```
+
+### 4. Natural Language Processing
+
+The framework uses LLMs to:
+- Process natural language commands
+- Generate human-readable explanations
+- Provide market insights
+- Handle complex queries
+
+#### Example NLP Flow
+
+```python
+class NLPProcessor:
+    async def process_query(self, query):
+        # Convert natural language to structured command
+        command = await self.parse_command(query)
+        
+        # Execute command
+        result = await self.execute_command(command)
+        
+        # Generate natural language response
+        response = await self.generate_response(result)
+        
+        return response
+```
+
+### 5. Risk Management
+
+Built-in risk controls include:
+- Position size limits
+- Loss thresholds
+- Exposure monitoring
+- Emergency shutdown
+
+#### Example Risk Check
+
+```python
+class RiskManager:
+    async def check_risk(self, proposal):
+        # Check position size
+        if proposal.size > self.max_position_size:
+            return False, "Position size exceeds limit"
+            
+        # Check potential loss
+        if proposal.potential_loss > self.max_loss:
+            return False, "Potential loss too high"
+            
+        return True, "Risk checks passed"
+```
+
+## Architecture
+
+```
+near_swarm/
+├── core/
+│   ├── agent.py         # Base agent implementation
+│   ├── swarm_agent.py   # Swarm coordination
+│   ├── market_data.py   # Market data integration
+│   └── llm_provider.py  # LLM integration
+├── cli/
+│   └── chat.py         # Interactive interface
+└── examples/
+    ├── minimal.py      # Basic usage
+    └── swarm_system.py # Multi-agent setup
 ```
 
 ## Best Practices
 
-### Agent Design
+1. **Agent Design**
+   - Keep agents focused on specific tasks
+   - Implement proper error handling
+   - Use appropriate confidence thresholds
+   - Log important decisions
 
-1. **Specialization**
-   - Single responsibility
-   - Clear decision criteria
-   - Well-defined confidence calculation
+2. **Swarm Configuration**
+   - Start with small swarms (2-3 agents)
+   - Test consensus mechanisms thoroughly
+   - Monitor agent performance
+   - Adjust thresholds based on results
 
-2. **Confidence Scoring**
-   - Based on concrete metrics
-   - Normalized (0.0 to 1.0)
-   - Conservative estimates
+3. **Risk Management**
+   - Always implement position limits
+   - Use emergency shutdown mechanisms
+   - Monitor exposure continuously
+   - Log all risk-related decisions
 
-### Risk Management
+4. **Development Flow**
+   - Start on testnet
+   - Use small test transactions
+   - Monitor agent behavior
+   - Gradually increase complexity
 
-1. **Position Limits**
-   - Per-token limits
-   - Total exposure limits
-   - Dynamic adjustments
+## Security Considerations
 
-2. **Emergency Conditions**
-   - Market circuit breakers
-   - Volatility limits
-   - Loss thresholds
+1. **API Keys**
+   - Store securely in environment variables
+   - Never commit to version control
+   - Rotate regularly
+   - Use minimal required permissions
 
-### Performance Optimization
+2. **Transaction Safety**
+   - Implement transaction limits
+   - Use testnet for development
+   - Verify transaction parameters
+   - Monitor execution results
 
-1. **Monitoring**
-   - Agent performance
-   - Strategy outcomes
-   - System health
+3. **Error Handling**
+   - Graceful failure modes
+   - Proper cleanup procedures
+   - Comprehensive logging
+   - Alert mechanisms
 
-2. **Adjustment**
-   - Parameter tuning
-   - Agent weighting
-   - Strategy evolution
+## Next Steps
 
-## Advanced Topics
-
-For more advanced topics, see:
-
-- [Advanced Features](advanced-features.md)
-- [Performance Tuning](performance-tuning.md)
-- [Custom Agents](custom-agents.md)
+1. Follow the [Tutorial](tutorial.md)
+2. Explore example implementations
+3. Join the developer community
+4. Contribute to the framework

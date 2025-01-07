@@ -251,3 +251,58 @@ class MarketDataManager:
         except Exception as e:
             logger.error(f"Error analyzing market: {str(e)}")
             raise
+    
+    async def get_market_context(self) -> Dict[str, Any]:
+        """Get comprehensive market context."""
+        try:
+            # Get NEAR price and market data
+            near_data = await self.get_token_price("near")
+            
+            # Get DEX data
+            dex_data = await self.get_dex_data("ref-finance")
+            
+            # Calculate market metrics
+            volatility = self._calculate_volatility_from_changes(near_data)
+            
+            return {
+                "timestamp": datetime.now().isoformat(),
+                "near": {
+                    "price": near_data["price"],
+                    "market_trend": near_data.get("market_trend", "stable"),
+                    "confidence": near_data.get("confidence", 0.8),
+                    "volatility": volatility
+                },
+                "market": {
+                    "dex_tvl": dex_data["tvl"],
+                    "24h_volume": dex_data["24h_volume"],
+                    "network_load": "moderate"  # TODO: Implement network load calculation
+                },
+                "indicators": {
+                    "trend_strength": "medium",  # TODO: Implement trend strength calculation
+                    "market_sentiment": "neutral",  # TODO: Implement sentiment analysis
+                    "risk_level": "medium"  # TODO: Implement risk level calculation
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting market context: {str(e)}")
+            # Return default context on error
+            return {
+                "timestamp": datetime.now().isoformat(),
+                "near": {
+                    "price": 0.0,
+                    "market_trend": "unknown",
+                    "confidence": 0.5,
+                    "volatility": "unknown"
+                },
+                "market": {
+                    "dex_tvl": 0.0,
+                    "24h_volume": 0.0,
+                    "network_load": "unknown"
+                },
+                "indicators": {
+                    "trend_strength": "unknown",
+                    "market_sentiment": "unknown",
+                    "risk_level": "unknown"
+                }
+            }

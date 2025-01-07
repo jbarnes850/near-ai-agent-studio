@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Simple script to start NEAR Swarm chat interface
+python -m near_swarm.cli.chat "$@" 
