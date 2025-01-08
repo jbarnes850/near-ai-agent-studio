@@ -31,6 +31,8 @@ anthropic>=0.5.0
 langchain>=0.0.200
 transformers>=4.30.0
 torch>=2.0.0
+elevenlabs>=0.3.0  # Voice synthesis
+python-multipart>=0.0.6  # For voice file handling
 
 # Market Data
 requests>=2.31.0
