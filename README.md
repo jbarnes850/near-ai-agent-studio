@@ -8,7 +8,6 @@ A production-ready starter kit for building AI-powered agents and multi-agent sw
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI version](https://img.shields.io/badge/PyPI-0.1.0-blue.svg)](https://pypi.org/project/near-swarm/)
 [![Hyperbolic](https://img.shields.io/badge/LLM-Hyperbolic-purple.svg)](https://hyperbolic.xyz)
-
 [![Lava Network](https://img.shields.io/badge/RPC-Lava%20Network-orange.svg)](https://www.lavanet.xyz/get-started/near)
 
 ## Table of Contents
