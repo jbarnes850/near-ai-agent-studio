@@ -1,35 +1,42 @@
 """
 NEAR Protocol Integration Module
-Handles core NEAR blockchain interactions using FASTNEAR RPC
+Handles core NEAR blockchain interactions using Lava andFASTNEAR RPC
 """
 
 import logging
 import json
 import base58
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 import aiohttp
+import asyncio
+from aiohttp.client_exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
+MAX_RETRIES = 3
+RETRY_DELAY = 1  # seconds
+DEFAULT_GAS = 100_000_000_000_000  # 100 TGas
 
 class NEARConnectionError(Exception):
     """Custom exception for NEAR connection errors."""
     pass
 
-
 class NEARConnection:
     """Manages NEAR Protocol connection and transactions."""
 
     YOCTO_NEAR = 10**24  # 1 NEAR = 10^24 yoctoNEAR
-    DEFAULT_TESTNET_URL = "https://test.rpc.fastnear.com"  # FASTNEAR testnet endpoint
-    DEFAULT_MAINNET_URL = "https://free.rpc.fastnear.com"  # FASTNEAR mainnet endpoint
+    DEFAULT_TESTNET_URL = "https://neart.lava.build"  # Lava testnet endpoint
+    DEFAULT_MAINNET_URL = "https://near.lava.build"   # Lava mainnet endpoint
+    BACKUP_TESTNET_URL = "https://test.rpc.fastnear.com"  # FASTNEAR testnet endpoint
+    BACKUP_MAINNET_URL = "https://free.rpc.fastnear.com"  # FASTNEAR mainnet endpoint
 
     def __init__(
         self,
         network: str,
         account_id: str,
         private_key: str,
-        node_url: Optional[str] = None
+        node_url: Optional[str] = None,
+        use_backup: bool = False
     ):
         """Initialize NEAR connection.
         
@@ -38,26 +45,45 @@ class NEARConnection:
             account_id: NEAR account ID
             private_key: Account's private key
             node_url: Optional custom RPC endpoint
+            use_backup: Use backup RPC endpoints if True
         """
         self.network = network.lower()
         self.account_id = account_id
         self.private_key = private_key
         
-        # Use FASTNEAR endpoints by default
+        # Use provided URL or select appropriate default
         if node_url:
             self.node_url = node_url
         else:
-            self.node_url = (
-                self.DEFAULT_TESTNET_URL if self.network == "testnet"
-                else self.DEFAULT_MAINNET_URL
-            )
+            if use_backup:
+                self.node_url = (
+                    self.BACKUP_TESTNET_URL if self.network == "testnet"
+                    else self.BACKUP_MAINNET_URL
+                )
+            else:
+                self.node_url = (
+                    self.DEFAULT_TESTNET_URL if self.network == "testnet"
+                    else self.DEFAULT_MAINNET_URL
+                )
+        
+        # Initialize session
+        self._session = None
         
         logger.info(f"Initialized NEAR connection using {self.node_url}")
+    
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create aiohttp session."""
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession()
+        return self._session
 
     async def _rpc_call(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Make RPC call to NEAR node."""
-        try:
-            async with aiohttp.ClientSession() as session:
+        """Make RPC call to NEAR node with retries."""
+        last_error = None
+        
+        for attempt in range(MAX_RETRIES):
+            try:
+                session = await self._get_session()
                 async with session.post(
                     self.node_url,
                     json={
@@ -77,29 +103,73 @@ class NEARConnection:
                     if "error" in result:
                         raise NEARConnectionError(result["error"])
                     return result["result"]
-        except aiohttp.ClientError as e:
-            raise NEARConnectionError(f"RPC connection failed: {str(e)}")
-        except Exception as e:
-            raise NEARConnectionError(f"Unexpected error in RPC call: {str(e)}")
+                    
+            except asyncio.CancelledError:
+                # Don't retry on cancellation
+                raise
+            except Exception as e:
+                last_error = e
+                if attempt < MAX_RETRIES - 1:
+                    delay = RETRY_DELAY * (attempt + 1)
+                    logger.warning(
+                        f"RPC call failed (attempt {attempt + 1}/{MAX_RETRIES}), "
+                        f"retrying in {delay}s: {str(e)}"
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                break
+        
+        # If we get here, all retries failed
+        raise NEARConnectionError(f"RPC call failed after {MAX_RETRIES} attempts: {str(last_error)}")
 
     async def send_transaction(
         self,
         receiver_id: str,
-        amount: float
+        amount: float,
+        gas: Optional[int] = None,
+        attached_deposit: Optional[int] = None,
+        method_name: Optional[str] = None,
+        args: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Send a NEAR transaction."""
+        """Send a NEAR transaction.
+        
+        Args:
+            receiver_id: Recipient account ID
+            amount: Amount in NEAR
+            gas: Optional gas amount (default: 100 TGas)
+            attached_deposit: Optional yoctoNEAR to attach
+            method_name: Optional contract method to call
+            args: Optional arguments for contract call
+        """
         try:
             # Convert NEAR to yoctoNEAR
             amount_yocto = int(amount * self.YOCTO_NEAR)
             
-            # Create and sign transaction
+            # Prepare actions
+            actions = []
+            
+            # Add transfer action if amount > 0
+            if amount_yocto > 0:
+                actions.append({
+                    "type": "Transfer",
+                    "amount": str(amount_yocto)
+                })
+            
+            # Add function call action if method specified
+            if method_name:
+                actions.append({
+                    "type": "FunctionCall",
+                    "method_name": method_name,
+                    "args": json.dumps(args or {}),
+                    "gas": str(gas or DEFAULT_GAS),
+                    "deposit": str(attached_deposit or 0)
+                })
+            
+            # Create transaction
             tx = {
                 "signerId": self.account_id,
                 "receiverId": receiver_id,
-                "actions": [{
-                    "type": "Transfer",
-                    "amount": str(amount_yocto)
-                }]
+                "actions": actions
             }
             
             # Send transaction
@@ -146,3 +216,48 @@ class NEARConnection:
         except Exception as e:
             logger.error(f"Failed to get balance: {str(e)}")
             raise
+    
+    async def get_gas_price(self) -> int:
+        """Get current gas price."""
+        try:
+            result = await self._rpc_call(
+                "gas_price",
+                [None]  # Get latest gas price
+            )
+            return int(result["gas_price"])
+        except Exception as e:
+            logger.error(f"Failed to get gas price: {str(e)}")
+            raise
+    
+    async def view_function(
+        self,
+        contract_id: str,
+        method_name: str,
+        args: Dict[str, Any]
+    ) -> Any:
+        """Call a view function on a contract."""
+        try:
+            result = await self._rpc_call(
+                "query",
+                {
+                    "request_type": "call_function",
+                    "finality": "final",
+                    "account_id": contract_id,
+                    "method_name": method_name,
+                    "args_base64": base58.b58encode(
+                        json.dumps(args).encode()
+                    ).decode()
+                }
+            )
+            return json.loads(
+                base58.b58decode(result["result"]).decode()
+            )
+        except Exception as e:
+            logger.error(f"View function call failed: {str(e)}")
+            raise
+    
+    async def close(self):
+        """Close the connection and cleanup."""
+        if self._session and not self._session.closed:
+            await self._session.close()
+            self._session = None

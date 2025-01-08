@@ -47,7 +47,7 @@ dependencies = [
 ]
 
 [project.scripts]
-near-swarm = "near_swarm.core.cli:cli"
+near-swarm = "near_swarm.cli:app"
 
 [project.optional-dependencies]
 dev = [

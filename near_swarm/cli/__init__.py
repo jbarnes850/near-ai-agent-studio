@@ -3,26 +3,21 @@ CLI Module
 Implements command-line interface for NEAR Swarm Intelligence
 """
 
-import click
-from typing import Optional
+import typer
+from typing import Optional, List
 
 from near_swarm.cli.chat import chat
+from near_swarm.cli.create import create
+from near_swarm.cli.test import test
+from near_swarm.cli.deploy import deploy
 
-@click.group()
-def cli():
-    """NEAR Swarm Intelligence CLI"""
-    pass
+app = typer.Typer(help="NEAR Swarm Intelligence CLI - Manage your swarm strategies.")
 
-@cli.command()
-@click.option(
-    '--agent',
-    type=click.Choice(['market_analyzer', 'risk_manager', 'strategy_optimizer']),
-    default='market_analyzer',
-    help='Type of agent to chat with'
-)
-def chat_cmd(agent: str):
-    """Start interactive chat session with an agent."""
-    chat(agent)
+# Register commands
+app.command()(chat)
+app.command()(create)
+app.command()(test)
+app.command()(deploy)
 
 if __name__ == '__main__':
-    cli() 
+    app() 

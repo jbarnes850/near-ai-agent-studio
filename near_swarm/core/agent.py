@@ -24,6 +24,8 @@ class AgentConfig:
     llm_max_tokens: int = 2000
     api_url: Optional[str] = None
     system_prompt: Optional[str] = None
+    rpc_url: Optional[str] = None
+    use_backup_rpc: bool = False
 
     def validate(self) -> None:
         """Validate configuration."""
@@ -44,11 +46,13 @@ class Agent:
         self.config = config
         self.config.validate()
         
-        # Initialize NEAR connection (always using FastNEAR for testnet)
+        # Initialize NEAR connection with configurable RPC
         self.near = NEARConnection(
-            network="testnet",  # Force testnet
+            network=config.network,
             account_id=config.account_id,
-            private_key=config.private_key
+            private_key=config.private_key,
+            node_url=config.rpc_url,
+            use_backup=config.use_backup_rpc
         )
         
         self._is_running = False
@@ -77,16 +81,20 @@ class Agent:
     async def send_tokens(
         self,
         recipient_id: str,
-        amount: str,  # Amount in NEAR
-        token_id: Optional[str] = None
+        amount: str,  # Amount in NEAR or token units
+        token_id: Optional[str] = None,
+        gas: Optional[int] = None,
+        attached_deposit: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Send tokens to another account.
         
         Args:
             recipient_id: Recipient account ID
-            amount: Amount to send in NEAR (will be converted to yoctoNEAR)
+            amount: Amount to send (in NEAR or token units)
             token_id: Optional token contract ID for NEP-141 tokens
+            gas: Optional gas amount for the transaction
+            attached_deposit: Optional yoctoNEAR to attach
             
         Returns:
             Transaction outcome
@@ -96,17 +104,36 @@ class Agent:
             
         try:
             # Convert amount from string to float for NEAR conversion
-            amount_near = float(amount)
+            amount_float = float(amount)
             
-            # Send tokens using async transaction method
-            result = await self.near.send_transaction(
-                receiver_id=recipient_id,
-                amount=amount_near
-            )
+            # If this is a token transfer, use the token contract
+            if token_id:
+                # Prepare FT transfer call
+                tx_args = {
+                    "receiver_id": recipient_id,
+                    "amount": str(amount_float)
+                }
+                
+                # Send tokens using async transaction method
+                result = await self.near.send_transaction(
+                    receiver_id=token_id,  # Token contract
+                    amount=0,  # No NEAR transfer
+                    gas=gas,
+                    attached_deposit=attached_deposit,
+                    method_name="ft_transfer",
+                    args=tx_args
+                )
+            else:
+                # Direct NEAR transfer
+                result = await self.near.send_transaction(
+                    receiver_id=recipient_id,
+                    amount=amount_float,
+                    gas=gas,
+                    attached_deposit=attached_deposit
+                )
             
             logger.info(
-                f"Sent {amount} NEAR to {recipient_id}"
-                f"{' via ' + token_id if token_id else ''}"
+                f"Sent {amount} {'NEAR' if not token_id else token_id} to {recipient_id}"
             )
             
             return result
@@ -121,8 +148,18 @@ class Agent:
             raise RuntimeError("Agent must be running to check balance")
             
         try:
-            balance = await self.near.get_account_balance()
-            return balance["available"]
+            if token_id:
+                # Get token balance using ft_balance_of
+                result = await self.near.view_function(
+                    token_id,
+                    "ft_balance_of",
+                    {"account_id": self.config.account_id}
+                )
+                return result
+            else:
+                # Get NEAR balance
+                balance = await self.near.get_account_balance()
+                return balance["available"]
             
         except Exception as e:
             logger.error(f"Error checking balance: {str(e)}")
@@ -131,3 +168,4 @@ class Agent:
     async def close(self):
         """Clean up resources."""
         await self.stop()
+        await self.near.close()

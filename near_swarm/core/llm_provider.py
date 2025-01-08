@@ -92,29 +92,38 @@ class HyperbolicProvider(LLMProvider):
         try:
             # Check if this is a test prompt
             if "test_connection" in prompt.lower():
-                # For test prompts, use a simpler format
                 messages = [{"role": "user", "content": "Say 'Connected' if you can hear me."}]
-                temp = 0.1  # Lower temperature for test
-                tokens = 10  # Fewer tokens for test
+                temp = 0.1
+                tokens = 10
                 response_format = None
             else:
-                # Use provided system prompt or default
-                system_prompt = self.config.system_prompt or """You are a specialized NEAR Protocol trading agent.
-Your responses must always be in valid JSON format with the following structure:
+                # Enhanced system prompt for more reliable JSON responses
+                system_prompt = """You are a specialized NEAR Protocol trading agent.
+You must respond ONLY with valid JSON in the following format:
 {
-    "decision": boolean,      // Your decision to approve or reject
-    "confidence": float,      // Confidence level between 0.0 and 1.0
-    "reasoning": string       // Detailed explanation of your decision
+    "decision": true/false,     // Boolean: true to approve, false to reject
+    "confidence": 0.0 to 1.0,   // Number: your confidence level
+    "reasoning": "string"       // String: your detailed analysis
 }
 
-Consider all provided market context in your analysis. Focus on:
-1. Current market conditions and trends
-2. Risk factors and exposure levels
-3. Network conditions and gas costs
-4. Historical patterns and volatility
-5. Technical indicators and metrics
+Example response:
+{
+    "decision": false,
+    "confidence": 0.85,
+    "reasoning": "Market volatility is high and price trend is downward..."
+}
 
-Always provide thorough reasoning for your decisions."""
+Focus your analysis on:
+1. Market conditions and trends
+2. Risk factors and exposure
+3. Network conditions and costs
+4. Historical patterns
+5. Technical indicators
+
+DO NOT include any text outside the JSON object.
+DO NOT include comments in the JSON.
+DO NOT include any explanatory text.
+ENSURE all values have the correct data types."""
 
                 messages = [
                     {"role": "system", "content": system_prompt},
@@ -124,7 +133,7 @@ Always provide thorough reasoning for your decisions."""
                 tokens = max_tokens or self.config.max_tokens
                 response_format = {"type": "json_object"}
 
-            # Make the API call using the OpenAI SDK
+            # Make API call
             completion = self.client.chat.completions.create(
                 model=self.config.model,
                 messages=messages,
@@ -133,7 +142,7 @@ Always provide thorough reasoning for your decisions."""
                 response_format=response_format
             )
 
-            content = completion.choices[0].message.content
+            content = completion.choices[0].message.content.strip()
 
             # For test prompts, return as is
             if "test_connection" in prompt.lower():
@@ -141,19 +150,38 @@ Always provide thorough reasoning for your decisions."""
 
             # For regular prompts, validate JSON response
             try:
+                # Remove any non-JSON text that might be present
+                json_start = content.find("{")
+                json_end = content.rfind("}") + 1
+                if json_start >= 0 and json_end > json_start:
+                    content = content[json_start:json_end]
+                
                 parsed = json.loads(content)
-                required_fields = ["decision", "confidence", "reasoning"]
-                if not all(field in parsed for field in required_fields):
-                    raise ValueError("Missing required fields in response")
-                if not isinstance(parsed["decision"], bool):
+                
+                # Validate data types and ranges
+                if not isinstance(parsed.get("decision"), bool):
                     raise ValueError("Decision must be a boolean")
-                if not isinstance(parsed["confidence"], (int, float)):
-                    raise ValueError("Confidence must be a number")
-                if not isinstance(parsed["reasoning"], str):
-                    raise ValueError("Reasoning must be a string")
-                return content
-            except json.JSONDecodeError:
-                raise ValueError("Invalid JSON response from LLM")
+                
+                confidence = parsed.get("confidence")
+                if not isinstance(confidence, (int, float)) or confidence < 0 or confidence > 1:
+                    raise ValueError("Confidence must be a number between 0 and 1")
+                
+                if not isinstance(parsed.get("reasoning"), str) or not parsed.get("reasoning"):
+                    raise ValueError("Reasoning must be a non-empty string")
+                
+                # Return the cleaned and validated JSON
+                return json.dumps({
+                    "decision": parsed["decision"],
+                    "confidence": float(confidence),
+                    "reasoning": parsed["reasoning"]
+                })
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON response: {content}")
+                raise ValueError(f"Invalid JSON response from LLM: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error validating response: {content}")
+                raise ValueError(f"Error validating LLM response: {str(e)}")
 
         except Exception as e:
             logger.error(f"Error querying API: {str(e)}")

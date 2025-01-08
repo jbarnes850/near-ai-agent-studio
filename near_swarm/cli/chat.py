@@ -32,9 +32,6 @@ logger = logging.getLogger(__name__)
 # Rich console for pretty printing
 console = Console()
 
-# Create Typer app
-app = typer.Typer(help="NEAR Swarm Intelligence CLI")
-
 class AgentType(str, Enum):
     """Available agent types"""
     CHAT_ASSISTANT = "chat_assistant"  # Default conversational agent
@@ -332,7 +329,7 @@ Status: {'Running' if self.agent and self.agent.is_running() else 'Stopped'}
     def do_quit(self, arg: str):
         """Exit the chat interface."""
         return True
-    
+
     def do_trend(self, arg: str):
         """Get trend analysis for a timeframe."""
         if not arg:
@@ -739,7 +736,17 @@ You can also interact naturally with your agent:
         except ValueError:
             console.print("[red]Invalid format. Use: config key=value[/red]")
 
-@app.command()
+    def do_quickstart(self, arg: str):
+        """Interactive quickstart wizard"""
+        console.print(Panel("""
+        Welcome to NEAR Swarm! Let's get you started:
+        
+        1. Choose your use case
+        2. Configure your agents
+        3. Test your strategy
+        4. Deploy to testnet
+        """)) 
+
 def chat(
     agent: AgentType = typer.Option(AgentType.CHAT_ASSISTANT, "--agent", "-a", help="Type of agent to chat with"),
     json_output: bool = typer.Option(False, "--json", "-j", help="Output responses in JSON format"),
@@ -827,7 +834,4 @@ def chat(
         console.print("\n👋 Goodbye!")
     except Exception as e:
         console.print(f"[red]Error in chat session: {str(e)}")
-        sys.exit(1)
-
-if __name__ == "__main__":
-    app() 
+        sys.exit(1) 

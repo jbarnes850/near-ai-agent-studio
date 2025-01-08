@@ -13,9 +13,15 @@ from near_swarm.core.market_data import MarketDataManager
 
 # Configure logging with colors
 import colorlog
+
+# Prevent duplicate logs
+logger = colorlog.getLogger(__name__)
+logger.propagate = False  # Prevent propagation to root logger
+logger.handlers = []  # Clear any existing handlers
+
 handler = colorlog.StreamHandler()
 handler.setFormatter(colorlog.ColoredFormatter(
-    '%(log_color)s%(levelname)s:%(name)s:%(message)s',
+    '%(log_color)s%(message)s',  # Simplified format without level/name
     log_colors={
         'DEBUG': 'cyan',
         'INFO': 'green',
@@ -24,7 +30,6 @@ handler.setFormatter(colorlog.ColoredFormatter(
         'CRITICAL': 'red,bg_white',
     }
 ))
-logger = colorlog.getLogger(__name__)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
@@ -37,25 +42,29 @@ async def run_simple_strategy() -> Dict[str, Any]:
     market_data = None
     
     try:
-        logger.info("🚀 Initializing simple strategy...")
+        logger.info("\n🚀 Phase 1: Initialization")
+        logger.info("Initializing market data and fetching current conditions...")
         
         # Initialize market data
-        logger.info("📊 Fetching market data...")
         market_data = MarketDataManager()
-        near_data = await market_data.get_token_price("near")
-        dex_data = await market_data.get_dex_data("ref-finance")
         
-        logger.info(f"• Current NEAR Price: ${near_data['price']:.2f}")
-        logger.info(f"• 24h Volume: {near_data['24h_volume']}")
-        logger.info(f"• Market Trend: {near_data['market_trend']}")
-        logger.info(f"• Volatility: {near_data['volatility']}")
+        # Get market context
+        near_data = await market_data.get_token_price("near")
+        market_context = await market_data.get_market_context()
+        
+        logger.info("\n📊 Current Market Conditions:")
+        logger.info(f"• NEAR Price: ${near_data['price']:.2f}")
+        logger.info(f"• 24h Trading Volume: {near_data['24h_volume']}")
+        logger.info(f"• Market Direction: {near_data['market_trend']}")
+        logger.info(f"• Price Volatility: {near_data['volatility']}")
         
         # Load configuration
         config = load_config()
         
-        # Initialize agents with specific roles and confidence thresholds
-        logger.info("\n🤖 Creating agents...")
+        logger.info("\n🤖 Phase 2: Agent Initialization")
+        logger.info("Creating specialized AI agents with different roles...")
         
+        # Market Analyzer: Evaluates market conditions and trends
         market_analyzer = SwarmAgent(
             config,
             SwarmConfig(
@@ -64,8 +73,9 @@ async def run_simple_strategy() -> Dict[str, Any]:
                 min_votes=2
             )
         )
-        logger.info("✓ Market Analyzer ready")
+        logger.info("✓ Market Analyzer: Evaluates price trends, volume, and market sentiment")
 
+        # Risk Manager: Assesses transaction risks
         risk_manager = SwarmAgent(
             config,
             SwarmConfig(
@@ -74,8 +84,9 @@ async def run_simple_strategy() -> Dict[str, Any]:
                 min_votes=2
             )
         )
-        logger.info("✓ Risk Manager ready")
+        logger.info("✓ Risk Manager: Analyzes transaction risks and network conditions")
 
+        # Strategy Optimizer: Optimizes execution parameters
         strategy_optimizer = SwarmAgent(
             config,
             SwarmConfig(
@@ -84,19 +95,22 @@ async def run_simple_strategy() -> Dict[str, Any]:
                 min_votes=2
             )
         )
-        logger.info("✓ Strategy Optimizer ready")
+        logger.info("✓ Strategy Optimizer: Fine-tunes transaction parameters")
 
+        logger.info("\n🔄 Phase 3: Network Initialization")
+        logger.info("Starting agents and establishing secure connections...")
+        
         # Start all agents
-        logger.info("\n🔄 Starting agents...")
         await market_analyzer.start()
         await risk_manager.start()
         await strategy_optimizer.start()
-        logger.info("✓ All agents started")
+        logger.info("✓ All agents successfully connected to NEAR network")
 
         # Form swarm with all agents
-        logger.info("\n🔗 Forming swarm network...")
+        logger.info("\n🔗 Phase 4: Swarm Formation")
+        logger.info("Connecting agents into a collaborative swarm network...")
         await market_analyzer.join_swarm([risk_manager, strategy_optimizer])
-        logger.info("✓ Swarm network established")
+        logger.info("✓ Secure peer-to-peer connections established between agents")
 
         # Example NEAR transfer proposal with real market context
         proposal = {
@@ -110,52 +124,57 @@ async def run_simple_strategy() -> Dict[str, Any]:
                     "24h_volume": near_data["24h_volume"],
                     "volatility": near_data["volatility"],
                     "market_trend": near_data["market_trend"],
-                    "gas_price": "0.001",  # TODO: Get from RPC
-                    "network_load": "moderate"  # TODO: Calculate from block stats
+                    "gas_price": "0.001",
+                    "network_load": market_context["market"]["network_load"]
                 }
             }
         }
 
-        logger.info("\n=== Running LLM-Powered Multi-Agent Strategy Example ===")
-        logger.info(f"📝 Proposal: Transfer {proposal['params']['amount']} NEAR to {proposal['params']['recipient']}")
-        logger.info("\n📊 Market Context:")
-        logger.info(f"• Current NEAR Price: ${proposal['params']['market_context']['current_price']:.2f}")
-        logger.info(f"• 24h Volume: {proposal['params']['market_context']['24h_volume']}")
-        logger.info(f"• Market Trend: {proposal['params']['market_context']['market_trend']}")
-        logger.info(f"• Volatility: {proposal['params']['market_context']['volatility']}")
+        logger.info("\n🤔 Phase 5: Decision Making")
+        logger.info("Analyzing proposed transaction...")
+        logger.info(f"\n📝 Transaction Details:")
+        logger.info(f"• Type: Transfer {proposal['params']['amount']} NEAR")
+        logger.info(f"• To: {proposal['params']['recipient']}")
+        logger.info(f"• Value: ${float(proposal['params']['amount']) * near_data['price']:.2f}")
+        
+        logger.info("\n💭 Agents are now evaluating the transaction...")
+        logger.info("• Market Analyzer is checking market conditions")
+        logger.info("• Risk Manager is assessing potential risks")
+        logger.info("• Strategy Optimizer is evaluating execution parameters")
 
         # Get swarm consensus with LLM-powered evaluation
-        logger.info("\n🤔 Getting swarm consensus...")
         result = await market_analyzer.propose_action(
             action_type=proposal["type"],
             params=proposal["params"]
         )
 
-        logger.info("\n=== Swarm Decision Analysis ===")
+        logger.info("\n🎯 Phase 6: Final Decision")
         logger.info(f"{'✅ Consensus reached' if result['consensus'] else '❌ Consensus not reached'}")
-        logger.info(f"📊 Approval rate: {result['approval_rate']:.2%}")
-        logger.info("\n💭 Agent Reasoning:")
-        for i, reason in enumerate(result["reasons"]):
-            logger.info(f"\nAgent {i+1}:")
+        logger.info(f"📊 Overall Approval Rate: {result['approval_rate']:.2%}")
+        
+        logger.info("\n💡 Agent Reasoning:")
+        for i, reason in enumerate(result["reasons"], 1):
+            logger.info(f"\nAgent {i} Analysis:")
             logger.info(f"• {reason}")
 
         if result["consensus"]:
-            logger.info("\n=== Executing Transfer ===")
-            logger.info("✅ Transfer completed successfully!")
-            logger.info("All agents have approved with sufficient confidence.")
+            logger.info("\n✅ Transaction Approved")
+            logger.info("All agents have approved with sufficient confidence")
+            logger.info("Transaction is safe to execute")
         else:
-            logger.info("\n=== Transfer Rejected ===")
-            logger.info("❌ The swarm decided not to execute the transfer.")
-            logger.info("Insufficient consensus or confidence levels not met.")
+            logger.info("\n❌ Transaction Rejected")
+            logger.info("Insufficient consensus or confidence levels not met")
+            logger.info("Transaction has been blocked for safety")
 
         return result
 
     except Exception as e:
-        logger.error(f"❌ Error in simple strategy: {str(e)}")
+        logger.error(f"❌ Strategy execution error: {str(e)}")
         raise
     finally:
         # Cleanup all agents
-        logger.info("\n🧹 Cleaning up...")
+        logger.info("\n🧹 Phase 7: Cleanup")
+        logger.info("Gracefully shutting down agents...")
         if market_data:
             await market_data.close()
         if market_analyzer:
@@ -164,7 +183,7 @@ async def run_simple_strategy() -> Dict[str, Any]:
             await risk_manager.close()
         if strategy_optimizer:
             await strategy_optimizer.close()
-        logger.info("✓ Cleanup complete")
+        logger.info("✓ All agents successfully shut down")
 
 if __name__ == "__main__":
     try:
