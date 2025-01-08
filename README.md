@@ -159,8 +159,8 @@ Before you begin, ensure you have:
 pip install near-swarm
 
 # Or clone the repository
-git clone https://github.com/jbarnes850/near-swarm-intelligence
-cd near-swarm-intelligence
+git clone https://github.com/jbarnes850/near-ai-agent-studio
+cd near-ai-agent-studio
 
 # Run the quickstart script
 ./scripts/quickstart.sh
