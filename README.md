@@ -100,7 +100,7 @@ Watch specialized AI agents collaborate in real-time:
 
 ### 💬 Chat Interface
 
-Powerful interactive development environment:
+Spin up your own chat interface in the CLI:
 ```bash
 # Start chatting with your AI assistant
 ./scripts/chat
@@ -110,14 +110,6 @@ Powerful interactive development environment:
 ./scripts/chat --multi-agent            # Multi-agent mode
 ./scripts/chat --verbose                # Detailed reasoning
 ```
-
-Features:
-- Natural language interaction
-- Market analysis and insights
-- Risk assessment
-- Portfolio management
-- Strategy optimization
-- Development tools
 
 ## ⚡️ Getting Started
 
