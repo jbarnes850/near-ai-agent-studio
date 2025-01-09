@@ -10,6 +10,7 @@ import logging
 import json
 from dataclasses import dataclass
 import openai
+import aiohttp
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -82,110 +83,98 @@ class HyperbolicProvider(LLMProvider):
             base_url=config.api_url
         )
 
-    async def query(
-        self,
-        prompt: str,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None
-    ) -> str:
-        """Query Hyperbolic API using OpenAI SDK."""
+    async def query(self, prompt: str, expect_json: bool = False) -> str:
+        """Query the LLM provider with a prompt."""
         try:
-            # Check if this is a test prompt
-            if "test_connection" in prompt.lower():
-                messages = [{"role": "user", "content": "Say 'Connected' if you can hear me."}]
-                temp = 0.1
-                tokens = 10
-                response_format = None
-            else:
-                # Enhanced system prompt for more reliable JSON responses
-                system_prompt = """You are a specialized NEAR Protocol trading agent.
-You must respond ONLY with valid JSON in the following format:
-{
-    "decision": true/false,     // Boolean: true to approve, false to reject
-    "confidence": 0.0 to 1.0,   // Number: your confidence level
-    "reasoning": "string"       // String: your detailed analysis
-}
-
-Example response:
-{
-    "decision": false,
-    "confidence": 0.85,
-    "reasoning": "Market volatility is high and price trend is downward..."
-}
-
-Focus your analysis on:
-1. Market conditions and trends
-2. Risk factors and exposure
-3. Network conditions and costs
-4. Historical patterns
-5. Technical indicators
-
-DO NOT include any text outside the JSON object.
-DO NOT include comments in the JSON.
-DO NOT include any explanatory text.
-ENSURE all values have the correct data types."""
-
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ]
-                temp = temperature or self.config.temperature
-                tokens = max_tokens or self.config.max_tokens
-                response_format = {"type": "json_object"}
-
-            # Make API call
-            completion = self.client.chat.completions.create(
-                model=self.config.model,
-                messages=messages,
-                temperature=temp,
-                max_tokens=tokens,
-                response_format=response_format
-            )
-
-            content = completion.choices[0].message.content.strip()
-
-            # For test prompts, return as is
-            if "test_connection" in prompt.lower():
-                return "OK" if "connected" in content.lower() else "Failed"
-
-            # For regular prompts, validate JSON response
-            try:
-                # Remove any non-JSON text that might be present
-                json_start = content.find("{")
-                json_end = content.rfind("}") + 1
-                if json_start >= 0 and json_end > json_start:
-                    content = content[json_start:json_end]
-                
-                parsed = json.loads(content)
-                
-                # Validate data types and ranges
-                if not isinstance(parsed.get("decision"), bool):
-                    raise ValueError("Decision must be a boolean")
-                
-                confidence = parsed.get("confidence")
-                if not isinstance(confidence, (int, float)) or confidence < 0 or confidence > 1:
-                    raise ValueError("Confidence must be a number between 0 and 1")
-                
-                if not isinstance(parsed.get("reasoning"), str) or not parsed.get("reasoning"):
-                    raise ValueError("Reasoning must be a non-empty string")
-                
-                # Return the cleaned and validated JSON
-                return json.dumps({
-                    "decision": parsed["decision"],
-                    "confidence": float(confidence),
-                    "reasoning": parsed["reasoning"]
-                })
-                
-            except json.JSONDecodeError as e:
-                logger.error(f"Invalid JSON response: {content}")
-                raise ValueError(f"Invalid JSON response from LLM: {str(e)}")
-            except Exception as e:
-                logger.error(f"Error validating response: {content}")
-                raise ValueError(f"Error validating LLM response: {str(e)}")
-
+            # Make API request
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.config.api_url + "/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.config.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": self.config.model,
+                        "messages": [
+                            {"role": "system", "content": self.config.system_prompt or "You are a helpful AI assistant."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "temperature": self.config.temperature,
+                        "max_tokens": self.config.max_tokens,
+                        "stream": False,
+                        "response_format": {"type": "json_object"} if expect_json else None
+                    }
+                ) as response:
+                    if response.status != 200:
+                        error_data = await response.json()
+                        raise RuntimeError(f"API request failed: {response.status} - {error_data.get('error', {}).get('message', 'Unknown error')}")
+                    
+                    data = await response.json()
+                    if "choices" not in data:
+                        raise RuntimeError("Invalid API response format")
+                    content = data["choices"][0]["message"]["content"].strip()
+                    
+                    # If JSON is expected, validate and parse
+                    if expect_json:
+                        try:
+                            json.loads(content)  # Validate JSON
+                            return content
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Invalid JSON response: {content}")
+                            raise RuntimeError(f"Invalid JSON response from LLM: {str(e)}")
+                    
+                    # For non-JSON responses, return as is
+                    return content
+                    
         except Exception as e:
             logger.error(f"Error querying API: {str(e)}")
             raise
+
+    async def stream(self, prompt: str):
+        """Stream responses from the LLM provider."""
+        try:
+            # Make API request
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.config.api_url + "/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.config.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": self.config.model,
+                        "messages": [
+                            {"role": "system", "content": self.config.system_prompt or "You are a helpful AI assistant."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "temperature": self.config.temperature,
+                        "max_tokens": self.config.max_tokens,
+                        "stream": True
+                    }
+                ) as response:
+                    if response.status != 200:
+                        error_data = await response.json()
+                        raise RuntimeError(f"API request failed: {response.status} - {error_data.get('error', {}).get('message', 'Unknown error')}")
+                    
+                    # Handle streaming response
+                    async for line in response.content:
+                        if line:
+                            try:
+                                line = line.decode('utf-8').strip()
+                                if line.startswith('data: '):
+                                    data = json.loads(line[6:])
+                                    if data.get('choices') and data['choices'][0].get('delta', {}).get('content'):
+                                        chunk = data['choices'][0]['delta']['content']
+                                        yield chunk
+                            except Exception as e:
+                                logger.error(f"Error parsing stream chunk: {str(e)}")
+                                continue
+                    
+        except Exception as e:
+            logger.error(f"Error in streaming: {str(e)}")
+            raise
+
     async def batch_query(
         self,
         prompts: List[str],

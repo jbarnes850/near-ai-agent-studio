@@ -117,7 +117,7 @@ class SwarmAgent(Agent):
         logger.info(f"Proposal result: consensus={consensus}, approval_rate={approval_rate}")
         return result
 
-    async def evaluate_proposal(self, proposal: Dict[str, Any]) -> Dict[str, Any]:
+    async def evaluate_proposal(self, proposal: Dict[str, Any], stream: bool = False) -> Dict[str, Any]:
         """Evaluate a proposal based on agent's role and expertise using LLM."""
         try:
             if not self._is_running:
@@ -127,7 +127,49 @@ class SwarmAgent(Agent):
             if not proposal.get("type") or not proposal.get("params"):
                 raise RuntimeError("transaction_outcome rejected - Invalid proposal format")
 
-            # Role-specific evaluation using LLM
+            # Handle general chat interactions
+            if proposal["type"] == "general_chat" and self.swarm_config.role == "chat_assistant":
+                query = proposal["params"]["query"]
+                context = proposal["params"].get("context", {})
+                
+                prompt = f"""You are a helpful AI assistant for the NEAR Protocol ecosystem.
+Your role is to help users understand and interact with NEAR's features and capabilities.
+
+User Query: {query}
+
+Please provide a helpful, informative response that:
+1. Directly addresses the user's question
+2. Includes relevant NEAR Protocol information
+3. Suggests useful commands or next steps if applicable
+4. Maintains a friendly, conversational tone
+
+Current Context:
+{json.dumps(context, indent=2)}
+
+Response should be clear, accurate, and engaging.
+Do not include any JSON formatting in your response.
+Just provide the natural language response directly."""
+
+                if stream:
+                    # For streaming, return an async generator
+                    async def response_stream():
+                        async for chunk in self.llm_provider.stream(prompt):
+                            yield chunk
+                    return {
+                        "type": "chat_response",
+                        "stream": response_stream(),
+                        "confidence": 0.95
+                    }
+                else:
+                    # For non-streaming, return the complete response
+                    response = await self.llm_provider.query(prompt, expect_json=False)
+                    return {
+                        "content": response,
+                        "type": "chat_response",
+                        "confidence": 0.95
+                    }
+
+            # For other proposal types, expect JSON responses
             role_prompt = ""
             if self.swarm_config.role == "risk_manager":
                 role_prompt = """As a Risk Manager, evaluate this proposal focusing on:
@@ -201,6 +243,30 @@ Your primary responsibility is market analysis and trend identification."""
 
 Your primary responsibility is optimizing execution and performance."""
 
+            elif self.swarm_config.role == "chat_assistant":
+                role_prompt = """As a Chat Assistant, evaluate this interaction focusing on:
+1. User Intent Analysis:
+   - Understand the user's question or request
+   - Identify key topics and concepts
+   - Determine required information or actions
+
+2. Response Planning:
+   - Structure clear and helpful responses
+   - Include relevant NEAR ecosystem information
+   - Suggest appropriate commands or tools
+
+3. Knowledge Integration:
+   - Incorporate NEAR Protocol expertise
+   - Reference relevant documentation
+   - Provide practical examples
+
+4. Interaction Quality:
+   - Maintain conversational tone
+   - Ensure accuracy and clarity
+   - Guide users effectively
+
+Your primary responsibility is helping users understand and interact with the NEAR ecosystem."""
+
             else:
                 raise RuntimeError(f"transaction_outcome rejected - Unsupported role: {self.swarm_config.role}")
 
@@ -240,41 +306,39 @@ Consider these market conditions in your evaluation."""
 
 Current Proposal:
 Type: {proposal['type']}
-Amount: {proposal['params'].get('amount')} {proposal['params'].get('token')}
-Recipient: {proposal['params'].get('recipient')}
+Amount: {proposal['params'].get('amount', '0.1')} NEAR
+Recipient: {proposal['params'].get('recipient', 'bob.testnet')}
+Market Context:
+- Price: ${proposal['params'].get('market_context', {}).get('current_price', '4.91')}
+- Volume: ${proposal['params'].get('market_context', {}).get('24h_volume', '401M')}
+- Trend: {proposal['params'].get('market_context', {}).get('market_trend', 'neutral')}
+- Network Load: {proposal['params'].get('market_context', {}).get('network_load', 'moderate')}
 
 Evaluate this proposal based on your role and expertise. Consider all market conditions and risk factors.
 Provide a thorough analysis with clear reasoning for your decision.
 
-Response must be in valid JSON format with:
+You must respond with a valid JSON object containing exactly these fields:
 {{
-    "decision": boolean,      // Your decision to approve or reject
-    "confidence": float,      // Your confidence level (0.0 to 1.0)
-    "reasoning": string       // Detailed explanation of your decision
+    "decision": boolean,      // true to approve, false to reject
+    "confidence": number,     // between 0.0 and 1.0
+    "reasoning": string      // detailed explanation
+}}
+
+Example response:
+{{
+    "decision": true,
+    "confidence": 0.85,
+    "reasoning": "Market conditions are favorable with low volatility..."
 }}"""
 
-            # Query LLM provider
-            response = await self.llm_provider.query(prompt)
-
-            # Parse and validate response
-            try:
-                result = json.loads(response)
-                if not isinstance(result.get("decision"), bool):
-                    raise ValueError("Decision must be a boolean")
-                if not isinstance(result.get("confidence"), (int, float)):
-                    raise ValueError("Confidence must be a number")
-                if not isinstance(result.get("reasoning"), str):
-                    raise ValueError("Reasoning must be a string")
-                return result
-            except json.JSONDecodeError:
-                raise ValueError("Invalid JSON response from LLM")
+            response = await self.llm_provider.query(prompt, expect_json=True)
+            return json.loads(response)
 
         except Exception as e:
-            logger.error(f"LLM evaluation failed: {str(e)}")
             return {
                 "decision": False,
                 "confidence": 0.0,
-                "reasoning": f"LLM evaluation failed: {str(e)}"
+                "reasoning": f"Error evaluating proposal: {str(e)}"
             }
 
     def _generate_evaluation_prompt(self, proposal: Dict[str, Any], role_prompt: str) -> str:

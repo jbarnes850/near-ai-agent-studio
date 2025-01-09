@@ -519,16 +519,33 @@ Status: {'Running' if self.agent and self.agent.is_running() else 'Stopped'}
                 }
             }
             
-            if self.reasoning_enabled:
-                context["reasoning_steps"] = [
-                    "1. Analyze the user's request and identify key objectives",
-                    "2. Gather relevant market data and context",
-                    "3. Apply domain expertise and pattern recognition",
-                    "4. Consider multiple scenarios and outcomes",
-                    "5. Form recommendations with confidence scores",
-                    "6. Suggest concrete actions or commands"
-                ]
+            # For chat assistant, handle general questions differently
+            if self.agent_type == "chat_assistant" and not text.startswith('/'):
+                response = await self.agent.evaluate_proposal({
+                    "type": "general_chat",
+                    "params": {
+                        "query": text,
+                        "context": context,
+                        "require_command": False
+                    }
+                }, stream=True)
+                
+                # Handle streaming response
+                if "stream" in response:
+                    console.print("\n", end="")
+                    async for chunk in response["stream"]:
+                        console.print(chunk, end="")
+                    console.print("\n")
+                    return
+                
+                # Handle non-streaming response
+                if isinstance(response.get("content"), str):
+                    self._format_output({"content": response["content"]})
+                else:
+                    self._format_output(response)
+                return
             
+            # Handle command-based interactions
             response = await self.agent.evaluate_proposal({
                 "type": "chat_interaction",
                 "params": {
@@ -541,15 +558,6 @@ Status: {'Running' if self.agent and self.agent.is_running() else 'Stopped'}
                     } if not self.json_output else None
                 }
             })
-            
-            # Handle structured responses
-            if not self.json_output and "type" in response:
-                if response["type"] == "market_analysis":
-                    response["content"] = MarketAnalysis(**response["data"]).json(indent=2)
-                elif response["type"] == "risk_assessment":
-                    response["content"] = RiskAssessment(**response["data"]).json(indent=2)
-                elif response["type"] == "strategy_proposal":
-                    response["content"] = StrategyProposal(**response["data"]).json(indent=2)
             
             # Check if response contains a command to execute
             if "command" in response:

@@ -53,6 +53,14 @@ echo -e "• ${GREEN}Market Analysis${NC} - Price and volume evaluation"
 echo -e "• ${GREEN}Risk Management${NC} - Safety and exposure control"
 echo -e "• ${GREEN}Strategy Optimization${NC} - Performance tuning"
 echo ""
+echo -e "${CYAN}This setup will:${NC}"
+echo "1. Configure your Python environment"
+echo "2. Set up your NEAR testnet account"
+echo "3. Initialize AI agents with different roles"
+echo "4. Run a demo showing multi-agent decision making"
+echo ""
+echo -e "${CYAN}Press Enter when you're ready to begin...${NC}"
+read -r
 
 # Check for virtual environment
 if [[ -z "${VIRTUAL_ENV}" ]]; then
@@ -141,36 +149,26 @@ section_header "🚀 Creating Swarm Agents"
 
 # Create market analyzer agent
 show_progress "Creating Market Analyzer agent"
-near-swarm create-agent market_analyzer --min-confidence 0.7
+python -m near_swarm.core.cli create-agent market_analyzer --min-confidence 0.7
 
 # Create risk manager agent
 show_progress "Creating Risk Manager agent"
-near-swarm create-agent risk_manager --min-confidence 0.8
+python -m near_swarm.core.cli create-agent risk_manager --min-confidence 0.8
 
 # Create strategy optimizer agent
 show_progress "Creating Strategy Optimizer agent"
-near-swarm create-agent strategy_optimizer --min-confidence 0.7
+python -m near_swarm.core.cli create-agent strategy_optimizer --min-confidence 0.7
 
 # List created agents
 echo -e "\n${CYAN}Created Agents:${NC}"
-near-swarm list-agents
+python -m near_swarm.core.cli list-agents
 
 # Initialize demo strategy
 section_header "📈 Running Demo Strategy"
 
-# Create and run demo strategy
-show_progress "Initializing demo strategy"
-near-swarm init arbitrage
-
-# Run the strategy
+# Run the demo strategy
 show_progress "Running demo strategy"
-cd arbitrage
-near-swarm run --example simple_strategy
-
-# Add demo transaction
-section_header "💫 Testing Swarm Decision Making"
-show_progress "Proposing test transaction"
-near-swarm run --example simple_strategy --demo-mode
+python -m near_swarm.core.cli run --example simple_strategy
 
 # After creating agents, show status
 section_header "📊 System Status"
