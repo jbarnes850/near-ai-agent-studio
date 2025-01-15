@@ -17,6 +17,7 @@ from importlib.util import spec_from_file_location, module_from_spec
 # Import core components
 from near_swarm.core.config import load_config
 from near_swarm.core.swarm_agent import SwarmAgent, SwarmConfig
+from near_swarm.plugins import PluginLoader
 
 # Configure logging
 logging.basicConfig(
@@ -48,7 +49,7 @@ def cli():
     pass
 
 @cli.command()
-@click.argument('strategy_type', type=click.Choice(['arbitrage', 'market-making']))
+@click.argument('strategy_type', type=click.Choice(['arbitrage', 'market-making', 'token-transfer']))
 @click.option('--name', prompt='Strategy name', help='Name for your strategy')
 def init(strategy_type: str, name: str):
     """Initialize a new strategy from template."""
@@ -87,7 +88,6 @@ def init(strategy_type: str, name: str):
         
         config_file = os.path.join(name, 'config.json')
         with open(config_file, 'w') as f:
-            import json
             json.dump(config, f, indent=2)
         
         # Create .env template
@@ -173,7 +173,6 @@ def monitor(strategy: str):
     """Monitor strategy performance."""
     try:
         # Load config
-        import json
         with open(os.path.join(strategy, 'config.json'), 'r') as f:
             config = json.load(f)
         
@@ -235,7 +234,7 @@ def create_agent(role: str, min_confidence: float, min_votes: int):
         )
         
         # Initialize agent
-        agent = SwarmAgent(config=config, swarm_config=swarm_config)
+        agent = SwarmAgent(config=swarm_config)
         
         # Save agent configuration
         agent_config = {

@@ -1,80 +1,48 @@
 # NEAR Swarm Intelligence Framework Tutorial
 
-Welcome to the NEAR Swarm Intelligence Framework! This tutorial will guide you through building AI-powered agents that can interact with the NEAR blockchain. Whether you're an AI researcher, a Web3 developer, or a crypto-native builder, this guide will help you get started.
+Welcome to the NEAR Swarm Intelligence Framework! This tutorial will guide you through building AI-powered agents that can interact with the NEAR blockchain using our plugin-based architecture.
 
 ## 🎯 What You'll Build
 
 By the end of this tutorial, you'll have:
-- Created an AI agent that can interact with NEAR blockchain
-- Built a multi-agent swarm system with specialized roles
-- Implemented LLM-powered decision making
-- Deployed your agents to NEAR testnet
-- Added production-ready features
-
-## 🧠 System Prompts
-
-The framework uses role-specific system prompts to guide agent behavior. Here are the core roles:
-
-### Risk Manager
-```python
-RISK_MANAGER_PROMPT = """As a Risk Manager, evaluate proposals focusing on:
-1. Position Size Analysis
-2. Security Assessment
-3. Risk Metrics
-4. Compliance and Limits
-
-Your primary responsibility is protecting assets and maintaining risk parameters."""
-```
-
-### Market Analyzer
-```python
-MARKET_ANALYZER_PROMPT = """As a Market Analyzer, evaluate proposals focusing on:
-1. Price Analysis
-2. Market Conditions
-3. Technical Indicators
-4. Cross-market Analysis
-
-Your primary responsibility is market analysis and trend identification."""
-```
-
-### Strategy Optimizer
-```python
-STRATEGY_OPTIMIZER_PROMPT = """As a Strategy Optimizer, evaluate proposals focusing on:
-1. Execution Optimization
-2. Cost Analysis
-3. Performance Metrics
-4. Technical Efficiency
-
-Your primary responsibility is optimizing execution and performance."""
-```
-
-## 🚀 Quick Start (5 minutes)
-
-```bash
-# Install the framework
-pip install near-swarm
-
-# Create a new project with interactive wizard
-near-swarm create my-first-swarm --interactive
-
-# Start the development environment
-cd my-first-swarm
-near-swarm dev
-```
+- Created a custom agent plugin
+- Configured your agent using YAML
+- Integrated with the NEAR blockchain
+- Added LLM-powered decision making
+- Deployed your agent to NEAR testnet
 
 ## 🔧 Prerequisites
 
 - Python 3.12+
+- Git
 - An LLM API key (supports OpenAI, Anthropic, DeepSeek, or bring your own)
 - Basic understanding of async Python
 - NEAR testnet account (we'll help you create one)
+
+## 🚀 Quick Start (5 minutes)
+
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install the framework
+pip install -e .
+
+# Create a new agent plugin
+near-swarm create agent my-token-bot
+
+# Start the development environment
+cd my-token-bot
+near-swarm dev
+```
 
 ## 🎓 Learning Paths
 
 Choose your path based on your background:
 
 ### 🤖 For AI/ML Developers
-- Focus on agent architecture and LLM integration
+- Focus on agent plugins and LLM integration
 - Skip to the "Customizing Agent Behavior" section
 - See examples of different LLM providers
 
@@ -88,110 +56,133 @@ Choose your path based on your background:
 - Learn both AI and blockchain concepts
 - Build end-to-end applications
 
-## 1. Your First Agent (10 minutes)
+## 1. Your First Agent Plugin (10 minutes)
 
-Let's create your first NEAR agent! We'll build a simple token transfer agent named "TokenBot" that can:
+Let's create your first NEAR agent plugin! We'll build a simple token transfer agent named "TokenBot" that can:
 1. Connect to NEAR testnet
 2. Check its balance
 3. Send NEAR tokens to other accounts
 
-Here's the complete code with line-by-line explanations:
+### Step 1: Create Plugin Structure
 
-```python
-from near_swarm.core.agent import Agent, AgentConfig
-import asyncio
-import os
-from dotenv import load_dotenv
-
-# Define your agent's behavior
-TOKENBOT_PROMPT = """You are TokenBot, a NEAR agent specialized in token transfers.
-Your responsibilities:
-1. Verify transaction parameters
-2. Ensure sufficient balance
-3. Execute transfers safely
-4. Maintain accurate records
-
-Always prioritize security and accuracy in your operations."""
-
-async def main():
-    # 1. Load environment variables
-    load_dotenv()
-    
-    # 2. Configure your TokenBot agent
-    config = AgentConfig(
-        name="TokenBot",
-        network="testnet",
-        account_id=os.getenv("NEAR_ACCOUNT_ID"),
-        private_key=os.getenv("NEAR_PRIVATE_KEY"),
-        llm_provider="hyperbolic",
-        llm_api_key=os.getenv("LLM_API_KEY"),
-        llm_model="deepseek-ai/DeepSeek-V3",
-        llm_temperature=0.7,
-        llm_max_tokens=2000,
-        system_prompt=TOKENBOT_PROMPT,
-        rpc_url=os.getenv("NEAR_RPC_URL"),  # Optional custom RPC
-        use_backup_rpc=True  # Use backup RPC if primary fails
-    )
-    
-    # 3. Create and initialize agent
-    async with Agent(config) as token_bot:
-        try:
-            # 4. Check our balance
-            balance = await token_bot.check_balance()
-            print(f"TokenBot's balance: {balance} NEAR")
-            
-            # 5. Send some NEAR tokens
-            print("Sending 1.5 NEAR to recipient.testnet...")
-            result = await token_bot.send_tokens(
-                recipient_id="recipient.testnet",
-                amount="1.5"  # 1.5 NEAR
-            )
-            print(f"Success! Transaction hash: {result['transaction_hash']}")
-            
-            # 6. Check our new balance
-            new_balance = await token_bot.check_balance()
-            print(f"New balance after transfer: {new_balance} NEAR")
-            
-        except RuntimeError as e:
-            print(f"Failed to execute operation: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-
-if __name__ == "__main__":
-    asyncio.run(main())
+```bash
+near-swarm create agent token-bot
+cd token-bot
 ```
 
-### Understanding Each Step
+This creates:
+```
+token-bot/
+├── __init__.py
+├── agent.yaml     # Agent configuration
+├── plugin.py      # Agent implementation
+└── README.md      # Documentation
+```
 
-1. **Imports**: We import the necessary classes and utilities
-   - `Agent`: The core class for creating NEAR agents
-   - `AgentConfig`: Configuration class for setting up the agent
-   - `load_dotenv`: Helps load environment variables safely
+### Step 2: Configure Your Agent
 
-2. **Configuration**: We set up TokenBot with essential parameters
-   - `name`: Identifies your agent in logs and monitoring
-   - `network`: Choose between "testnet" (for development) or "mainnet"
-   - `account_id`: Your NEAR account that the agent will use
-   - `private_key`: The account's private key for signing transactions
-   - `llm_*`: AI model configuration for intelligent decision-making
+Edit `agent.yaml`:
 
-3. **Agent Creation**: We create the TokenBot instance with our config
+```yaml
+name: token-bot
+description: "A simple token transfer agent for NEAR blockchain"
+version: "0.1.0"
+author: "Your Name"
 
-4. **Starting Up**: The `start()` method:
-   - Verifies your NEAR account exists
-   - Establishes connection to the network
-   - Prepares the agent for operations
+# Agent capabilities
+capabilities:
+  - token_transfer
+  - balance_check
 
-5. **Basic Operations**: TokenBot can:
-   - Check its balance with `check_balance()`
-   - Send tokens with `send_tokens()`
-   - Handle errors gracefully
+# LLM configuration
+llm:
+  provider: ${LLM_PROVIDER}
+  model: ${LLM_MODEL}
+  temperature: 0.7
+  max_tokens: 2000
+  system_prompt: |
+    You are TokenBot, a NEAR agent specialized in token transfers.
+    Your responsibilities:
+    1. Verify transaction parameters
+    2. Ensure sufficient balance
+    3. Execute transfers safely
+    4. Maintain accurate records
 
-6. **Cleanup**: Always use `close()` to shut down properly
+    Always prioritize security and accuracy in your operations.
 
-### Environment Setup
+# NEAR configuration
+near:
+  network: ${NEAR_NETWORK:-testnet}
+  account_id: ${NEAR_ACCOUNT_ID}
+  private_key: ${NEAR_PRIVATE_KEY}
+  rpc_url: ${NEAR_RPC_URL:-""}
+  use_backup_rpc: true
+```
 
-Create a `.env` file in your project root with these variables:
+### Step 3: Implement Your Agent
+
+Edit `plugin.py`:
+
+```python
+from typing import Dict, Any
+from near_swarm.plugins.base import AgentPlugin
+from near_swarm.core.exceptions import AgentError
+
+class TokenBotPlugin(AgentPlugin):
+    async def initialize(self) -> None:
+        """Initialize resources for the agent."""
+        # Create LLM provider
+        self.llm = self.create_llm_provider(self.config.llm)
+        
+        # Initialize NEAR connection
+        self.near = await self.create_near_connection(self.config.near)
+        
+        self.logger.info("TokenBot initialized successfully")
+    
+    async def evaluate(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Process incoming requests and execute operations."""
+        try:
+            operation = context.get("operation")
+            if operation == "check_balance":
+                balance = await self.near.get_balance()
+                return {"balance": balance}
+                
+            elif operation == "send_tokens":
+                recipient = context.get("recipient")
+                amount = context.get("amount")
+                
+                # Validate parameters with LLM
+                validation = await self.llm.validate_transfer(
+                    recipient=recipient,
+                    amount=amount
+                )
+                
+                if not validation["is_valid"]:
+                    raise AgentError(validation["reason"])
+                
+                # Execute transfer
+                result = await self.near.send_tokens(
+                    recipient_id=recipient,
+                    amount=amount
+                )
+                return result
+                
+            else:
+                raise AgentError(f"Unknown operation: {operation}")
+                
+        except Exception as e:
+            self.logger.error(f"Operation failed: {e}")
+            raise AgentError(str(e))
+    
+    async def cleanup(self) -> None:
+        """Clean up resources."""
+        await self.near.close()
+        self.logger.info("TokenBot cleaned up successfully")
+```
+
+### Step 4: Environment Setup
+
+Create a `.env` file in your project root:
 
 ```bash
 # Required: NEAR account details
@@ -205,46 +196,71 @@ LLM_API_KEY=your-llm-api-key
 
 # Optional: AI model settings
 LLM_MODEL=deepseek-ai/DeepSeek-V3
-LLM_TEMPERATURE=0.7
-LLM_MAX_TOKENS=2000
 ```
 
-### Running Your Agent
+### Step 5: Run Your Agent
 
-1. Save the code as `token_bot.py`
-2. Create and fill your `.env` file
-3. Run your agent:
+1. Install your agent plugin:
 ```bash
-python token_bot.py
+near-swarm plugins install ./token-bot
+```
+
+2. Validate configuration:
+```bash
+near-swarm config validate
+```
+
+3. Start the agent:
+```bash
+near-swarm start token-bot
 ```
 
 You should see output like:
 ```
-Starting TokenBot...
-TokenBot's balance: 10.5 NEAR
-Sending 1.5 NEAR to recipient.testnet...
-Success! Transaction hash: HZBpK...
-New balance after transfer: 9.0 NEAR
-Shutting down TokenBot...
+Loading plugin: token-bot
+Initializing TokenBot...
+TokenBot initialized successfully
+Agent is running. Use Ctrl+C to stop.
+```
+
+### Step 6: Test Your Agent
+
+Use the CLI to interact with your agent:
+
+```bash
+# Check balance
+near-swarm execute token-bot --operation check_balance
+
+# Send tokens
+near-swarm execute token-bot \
+  --operation send_tokens \
+  --recipient recipient.testnet \
+  --amount 1.5
 ```
 
 ### Error Handling
 
-TokenBot includes built-in error handling:
+The plugin system provides built-in error handling:
+- `AgentError`: For expected operational errors
+- `PluginError`: For plugin lifecycle errors
+- `ConfigError`: For configuration issues
+
+Example error handling in your plugin:
 ```python
-try:
-    await token_bot.start()
-except RuntimeError as e:
-    print(f"Failed to start TokenBot: {e}")
-    # Handle initialization error
-except Exception as e:
-    print(f"Unexpected error: {e}")
-    # Handle other errors
-finally:
-    await token_bot.close()
+from near_swarm.core.exceptions import AgentError
+
+async def evaluate(self, context):
+    try:
+        # Your logic here
+        pass
+    except ValueError as e:
+        raise AgentError(f"Invalid input: {e}")
+    except Exception as e:
+        self.logger.error(f"Unexpected error: {e}")
+        raise AgentError("Internal error occurred")
 ```
 
-Now that you have your first agent running, let's move on to more advanced features!
+Now that you have your first agent plugin running, let's move on to more advanced features!
 
 ## 2. NEAR Integration (15 minutes)
 

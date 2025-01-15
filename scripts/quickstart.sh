@@ -68,7 +68,6 @@ if [[ -z "${VIRTUAL_ENV}" ]]; then
     echo -e "Please run the following commands first:"
     echo -e "${CYAN}python3 -m venv venv${NC}"
     echo -e "${CYAN}source venv/bin/activate${NC}"
-    echo -e "${CYAN}pip install -r requirements.txt${NC}"
     echo -e "${CYAN}pip install -e .${NC}"
     echo -e "\nThen run this script again."
     exit 1
@@ -86,22 +85,38 @@ section_header "🔧 Setting Up Environment"
 python3 -c "import sys; assert sys.version_info >= (3, 12), 'Python 3.12+ required'"
 echo -e "${GREEN}✓${NC} Python version OK"
 
+# Verify plugin system
+section_header "🔌 Testing Plugin System"
+show_progress "Verifying plugin infrastructure"
+python3 -c "
+from near_swarm.plugins import PluginLoader
+import asyncio
+
+async def test_plugins():
+    loader = PluginLoader()
+    print('✓ Plugin system initialized')
+    
+asyncio.run(test_plugins())
+"
+
 # Add market data verification
 section_header "📊 Testing Market Data Integration"
 show_progress "Fetching NEAR/USDC price data"
 python3 -c "
 from near_swarm.core.market_data import MarketDataManager
 import asyncio
+
 async def test_market():
-    market = MarketDataManager()
-    data = await market.get_token_price('near')
-    print(f'Current NEAR Price: \${data[\"price\"]:.2f}')
+    async with MarketDataManager() as market:
+        data = await market.get_token_price('near')
+        print(f'Current NEAR Price: \${data[\"price\"]:.2f}')
+    
 asyncio.run(test_market())
 "
 
 # Add LLM verification
 section_header "🧠 Testing LLM Integration"
-show_progress "Verifying Hyperbolic AI connection"
+show_progress "Verifying LLM connection"
 python3 -c "
 from near_swarm.core.llm_provider import create_llm_provider, LLMConfig
 from dotenv import load_dotenv
@@ -138,40 +153,35 @@ section_header "🔍 Verifying Installation"
 show_progress "Running verification checks"
 python3 scripts/verify_workshop.py
 
-# 4. Create and Run Swarm
-section_header "🚀 Creating Swarm Agents"
+# 4. Create and Run Plugins
+section_header "🚀 Setting Up Agent Plugins"
 
-# Create market analyzer agent
-show_progress "Creating Market Analyzer agent"
-python -m near_swarm.core.cli create-agent market_analyzer --min-confidence 0.7
+# Install example plugins
+show_progress "Installing token transfer plugin"
+near-swarm plugins install near_swarm/examples/token_transfer_strategy.py --name token-transfer
 
-# Create risk manager agent
-show_progress "Creating Risk Manager agent"
-python -m near_swarm.core.cli create-agent risk_manager --min-confidence 0.8
+show_progress "Installing arbitrage plugin"
+near-swarm plugins install near_swarm/examples/arbitrage_strategy.py --name arbitrage-agent
 
-# Create strategy optimizer agent
-show_progress "Creating Strategy Optimizer agent"
-python -m near_swarm.core.cli create-agent strategy_optimizer --min-confidence 0.7
+# List installed plugins
+echo -e "\n${CYAN}Installed Plugins:${NC}"
+near-swarm plugins list
 
-# List created agents
-echo -e "\n${CYAN}Created Agents:${NC}"
-python -m near_swarm.core.cli list-agents
+# Initialize demo
+section_header "📈 Running Demo"
 
-# Initialize demo strategy
-section_header "📈 Running Demo Strategy"
+# Run the token transfer demo
+show_progress "Running token transfer demo"
+near-swarm execute token-transfer --operation balance
 
-# Run the demo strategy
-show_progress "Running demo strategy"
-python -m near_swarm.core.cli run --example simple_strategy
-
-# After creating agents, show status
+# After setup, show status
 section_header "📊 System Status"
 
-# Show simple status instead of monitoring
+# Show component status
 echo -e "\n${CYAN}Active Components:${NC}"
-echo -e "• ${GREEN}Market Analyzer${NC} - Ready"
-echo -e "• ${GREEN}Risk Manager${NC} - Ready"
-echo -e "• ${GREEN}Strategy Optimizer${NC} - Ready"
+echo -e "• ${GREEN}Plugin System${NC} - Initialized"
+echo -e "• ${GREEN}Token Transfer Plugin${NC} - Ready"
+echo -e "• ${GREEN}Arbitrage Plugin${NC} - Ready"
 echo -e "• ${GREEN}NEAR Connection${NC} - Connected to testnet"
 echo -e "• ${GREEN}Market Data${NC} - Price feeds active"
 echo -e "• ${GREEN}LLM Integration${NC} - Connected"
@@ -181,8 +191,10 @@ section_header "🎉 Setup Complete!"
 echo -e "${GREEN}Your NEAR Swarm Intelligence environment is ready!${NC}"
 echo ""
 echo -e "${CYAN}Next steps:${NC}"
-echo "1. Create your own strategy: near-swarm init my-strategy"
-echo "2. Monitor activity: near-swarm monitor"
-echo "3. Explore examples in near_swarm/examples/"
+echo "1. Create a new plugin: near-swarm plugins create my-plugin"
+echo "2. List available plugins: near-swarm plugins list"
+echo "3. Run examples:"
+echo "   • Token transfer: near-swarm execute token-transfer --operation transfer --recipient bob.testnet --amount 0.1"
+echo "   • Arbitrage: near-swarm execute arbitrage-agent --operation analyze --pair NEAR/USDC"
 echo ""
 echo -e "${BLUE}For help, run: near-swarm --help${NC}"
