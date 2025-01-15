@@ -1,6 +1,6 @@
 # NEAR AI Agent Studio
 
-A production-ready starter kit for building AI agents and multi-agent swarms on NEAR. This template provides the essential building blocks for creating autonomous agents that can interact with the NEAR blockchain, make decisions using LLMs, and collaborate in swarms.
+A production-ready starter kit for building AI agents and multi-agent swarms on NEAR. This template provides the essential building blocks for creating autonomous agents that can interact with the NEAR blockchain, make decisions using LLMs, and collaborate in swarms. The NEAR AI Agent Studio is an educational and interactive starter kit designed for developers looking to build AI agents and agentic applications on NEAR. 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NEAR](https://img.shields.io/badge/NEAR-Protocol-blue.svg)](https://near.org)
@@ -9,13 +9,6 @@ A production-ready starter kit for building AI agents and multi-agent swarms on 
 [![PyPI version](https://img.shields.io/badge/PyPI-0.1.0-blue.svg)](https://pypi.org/project/near-swarm/)
 [![Hyperbolic](https://img.shields.io/badge/LLM-Hyperbolic-purple.svg)](https://hyperbolic.xyz)
 [![Lava Network](https://img.shields.io/badge/RPC-Lava%20Network-orange.svg)](https://www.lavanet.xyz/get-started/near)
-
-## Overview
-
-The NEAR AI Agent Studio is an educational and interactive starter kit designed for developers looking to build AI-powered applications on NEAR. It combines three powerful paradigms:
-- 🧠 Multi-agent swarm intelligence for collaborative decision-making
-- 🗣️ Voice-powered agents for portfolio management and market analysis
-- 💬 Interactive chat with autonomous agents for onchain actions
 
 ## ⚡️ Getting Started
 
