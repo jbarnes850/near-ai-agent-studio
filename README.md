@@ -98,19 +98,6 @@ Watch specialized AI agents collaborate in real-time:
    - Detailed reasoning
    - Transparent decisions
 
-### 💬 Chat Interface
-
-Spin up your own chat interface in the CLI:
-```bash
-# Start chatting with your AI assistant
-./scripts/chat
-
-# Available modes:
-./scripts/chat --agent market_analyzer  # Market analysis
-./scripts/chat --multi-agent            # Multi-agent mode
-./scripts/chat --verbose                # Detailed reasoning
-```
-
 ## ⚡️ Getting Started
 
 ### Prerequisites
@@ -139,17 +126,9 @@ Before you begin, ensure you have:
   - Register at [elevenlabs.io](https://elevenlabs.io)
   - Free tier includes basic voice synthesis
 
-#### Development Tools
-- Git
-- Node.js 18+ (for web interface)
-- Rust toolchain (optional, for contract development)
-
 ### Quick Start
 ```bash
-# Install from PyPI
-pip install near-swarm
-
-# Or clone the repository
+# clone the repository
 git clone https://github.com/jbarnes850/near-ai-agent-studio
 cd near-ai-agent-studio
 
