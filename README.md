@@ -82,21 +82,6 @@ cp .env.example .env
 near-swarm config validate
 ```
 
-### Running Demos
-```bash
-# Run all demos
-python near_swarm/examples/demo.py all
-
-# Run specific components
-python near_swarm/examples/demo.py voice    # Voice assistant
-python near_swarm/examples/demo.py strategy # Multi-agent strategy
-python near_swarm/examples/demo.py chat    # Interactive chat
-
-# Create your first agent
-near-swarm create agent my-agent
-near-swarm plugins list  # View available plugins
-```
-
 ## Core Components
 
 > **Tip**: Start with modifying the examples in `near_swarm/examples/` to understand the framework.
@@ -193,13 +178,6 @@ The architecture combines a flexible agent system with swarm intelligence capabi
    - Consensus building through multi-agent voting
    - Role-based evaluation with LLM reasoning
 
-This architecture enables:
-- Easy extension through agent plugins
-- Coordinated decision-making via swarm intelligence
-- Secure transaction handling
-- Market-aware operations
-- LLM-powered reasoning
-
 ### Project Structure
 ```bash
 near-swarm-intelligence/
@@ -221,6 +199,21 @@ near-swarm-intelligence/
 ```
 
 ## 🛠️ Development Guide
+
+### Running Demos
+```bash
+# Run all demos
+python near_swarm/examples/demo.py all
+
+# Run specific components
+python near_swarm/examples/demo.py voice    # Voice assistant
+python near_swarm/examples/demo.py strategy # Multi-agent strategy
+python near_swarm/examples/demo.py chat    # Interactive chat
+
+# Create your first agent
+near-swarm create agent my-agent
+near-swarm plugins list  # View available plugins
+```
 
 ### Creating Your First Agent
 
