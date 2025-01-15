@@ -44,14 +44,24 @@ class MarketDataManager:
     
     async def _ensure_session(self):
         """Ensure aiohttp session exists."""
-        if self.session is None:
+        if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession()
     
     async def close(self):
         """Close the session."""
-        if self.session:
+        if self.session and not self.session.closed:
             await self.session.close()
             self.session = None
+    
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self._ensure_session()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.close()
+        return None
     
     def _is_cache_valid(self, key: str) -> bool:
         """Check if cached data is still valid."""
@@ -78,17 +88,17 @@ class MarketDataManager:
         Returns:
             Dict with price, volume, and market data
         """
-        # Convert token to CoinGecko ID
-        token_id = self.TOKEN_IDS.get(token.lower(), token.lower())
-        
-        cache_key = f"price_{token_id}"
-        if self._is_cache_valid(cache_key):
-            return self.cache[cache_key][0]
-        
-        await self._ensure_session()
-        await self._rate_limit()
-        
         try:
+            # Convert token to CoinGecko ID
+            token_id = self.TOKEN_IDS.get(token.lower(), token.lower())
+            
+            cache_key = f"price_{token_id}"
+            if self._is_cache_valid(cache_key):
+                return self.cache[cache_key][0]
+            
+            await self._ensure_session()
+            await self._rate_limit()
+            
             # Get current price and market data
             async with self.session.get(
                 f"{self.api_url}/coins/{token_id}"
@@ -124,6 +134,9 @@ class MarketDataManager:
         except Exception as e:
             logger.error(f"Error fetching price data: {str(e)}")
             raise
+        finally:
+            # Don't close the session here as it may be reused
+            pass
     
     def _calculate_volatility_from_changes(self, market_data: Dict[str, Any]) -> str:
         """Calculate volatility from price changes."""
@@ -153,14 +166,14 @@ class MarketDataManager:
         Returns:
             Dict with DEX metrics
         """
-        cache_key = f"dex_{dex}"
-        if self._is_cache_valid(cache_key):
-            return self.cache[cache_key][0]
-        
-        await self._ensure_session()
-        await self._rate_limit()
-        
         try:
+            cache_key = f"dex_{dex}"
+            if self._is_cache_valid(cache_key):
+                return self.cache[cache_key][0]
+            
+            await self._ensure_session()
+            await self._rate_limit()
+            
             # Get exchange data
             async with self.session.get(
                 f"{self.api_url}/exchanges/{dex}"
@@ -194,6 +207,9 @@ class MarketDataManager:
                 "total_volume": 1_000_000,
                 "timestamp": datetime.now().isoformat(),
             }
+        finally:
+            # Don't close the session here as it may be reused
+            pass
     
     async def analyze_market_opportunity(
         self,
@@ -212,10 +228,10 @@ class MarketDataManager:
         Returns:
             Dict with opportunity analysis
         """
-        # Get market data
-        [base_token, quote_token] = token_pair.split('/')
-        
         try:
+            # Get market data
+            [base_token, quote_token] = token_pair.split('/')
+            
             # Get data for both tokens
             base_data = await self.get_token_price(base_token)
             quote_data = await self.get_token_price(quote_token)
@@ -251,6 +267,9 @@ class MarketDataManager:
         except Exception as e:
             logger.error(f"Error analyzing market: {str(e)}")
             raise
+        finally:
+            # Don't close the session here as it may be reused
+            pass
     
     async def get_market_context(self) -> Dict[str, Any]:
         """Get comprehensive market context."""
@@ -306,3 +325,6 @@ class MarketDataManager:
                     "risk_level": "unknown"
                 }
             }
+        finally:
+            # Don't close the session here as it may be reused
+            pass

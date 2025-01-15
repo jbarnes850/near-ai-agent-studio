@@ -13,30 +13,12 @@ A production-ready starter kit for building AI-powered agents and multi-agent sw
 ## Table of Contents
 1. [Overview](#overview)
 2. [Features](#features)
-   - [Swarm Intelligence](#-swarm-intelligence)
-   - [Interactive Voice Assistant](#-interactive-voice-assistant)
-   - [Multi-Agent Strategy](#-multi-agent-strategy)
-   - [Chat Interface](#-chat-interface)
 3. [Getting Started](#-getting-started)
-   - [Prerequisites](#prerequisites)
-   - [Quick Start](#quick-start)
-   - [Environment Setup](#environment-setup)
-   - [Running Demos](#running-demos)
 4. [Core Components](#-core-components)
-   - [System Architecture](#system-architecture)
-   - [Agent Types](#agent-types)
-   - [Integration Points](#integration-points)
 5. [Interactive Features](#-interactive-features)
-   - [Voice Commands](#voice-commands)
-   - [Chat Commands](#chat-commands)
-   - [Strategy Development](#strategy-development)
-6. [Development Guide](#-development-guide)
-   - [Creating Agents](#creating-agents)
-   - [Building Strategies](#building-strategies)
-   - [Testing](#testing)
-7. [Examples](#-examples)
-8. [Documentation](#-documentation)
-9. [Contributing](#-contributing)
+6. [Examples](#-examples)
+7. [Documentation](#-documentation)
+8. [Contributing](#-contributing)
 
 ## Overview
 
@@ -106,6 +88,7 @@ Before you begin, ensure you have:
 
 #### System Requirements
 - Python 3.12 or higher
+- Git
 - Operating System:
   - macOS 12.0+
   - Ubuntu 20.04+ / Debian 11+
@@ -128,18 +111,38 @@ Before you begin, ensure you have:
 
 ### Quick Start
 ```bash
-# clone the repository
+# Clone the repository
 git clone https://github.com/jbarnes850/near-ai-agent-studio
 cd near-ai-agent-studio
 
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
+
 # Run the quickstart script
+chmod +x scripts/quickstart.sh  # Make script executable
 ./scripts/quickstart.sh
 ```
 
 ### Environment Setup
 ```bash
-# Copy and edit environment variables
+# Copy environment template
 cp .env.example .env
+
+# Edit .env with your credentials
+# Required variables:
+# - NEAR_ACCOUNT_ID=your-account.testnet
+# - NEAR_PRIVATE_KEY=your-private-key
+# - LLM_PROVIDER=hyperbolic
+# - LLM_API_KEY=your-api-key
+# Optional:
+# - ELEVENLABS_API_KEY=your-key  # For voice features
+
+# Verify installation
+near-swarm config validate
 ```
 
 ### Running Demos
@@ -150,9 +153,39 @@ python near_swarm/examples/demo.py all
 # Run specific components
 python near_swarm/examples/demo.py voice    # Voice assistant
 python near_swarm/examples/demo.py strategy # Multi-agent strategy
+python near_swarm/examples/demo.py chat    # Interactive chat
+
+# Create your first agent
+near-swarm create agent my-agent
+near-swarm plugins list  # View available plugins
 ```
 
-## 🔧 Core Components
+### Troubleshooting
+
+If you encounter any issues:
+
+1. Ensure all dependencies are installed:
+```bash
+pip install -e ".[dev]"  # Install with development dependencies
+```
+
+2. Verify your Python version:
+```bash
+python --version  # Should be 3.12 or higher
+```
+
+3. Check your configuration:
+```bash
+near-swarm config show  # View current configuration
+```
+
+4. Common issues:
+- "Command not found": Ensure virtual environment is activated
+- Import errors: Verify installation with `pip list`
+- API errors: Check your API keys in `.env`
+- Git errors: Install git with `apt install git` or `brew install git`
+
+## Core Components
 
 > **Tip**: Start with modifying the examples in `near_swarm/examples/` to understand the framework.
 
@@ -163,78 +196,97 @@ python near_swarm/examples/demo.py strategy # Multi-agent strategy
 
 ```mermaid
 graph TB
-    %% Core Components
-    Core[Agent Core]
+    %% Core System
+    Core[Plugin System]
     style Core fill:black,stroke:#00C1DE,stroke-width:3px,color:white
 
-    %% Agent Capabilities
-    OnChain[Onchain Actions]
-    AI[AI Reasoning]
-    Memory[Agent Memory]
-    style OnChain fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-    style AI fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-    style Memory fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    %% Plugin Management
+    Registry[Plugin Registry]
+    Loader[Plugin Loader]
+    Config[Configuration]
+    style Registry fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    style Loader fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    style Config fill:black,stroke:#00C1DE,stroke-width:2px,color:white
 
-    %% External Systems
-    Blockchain[NEAR Protocol]
-    LLM[Language Models]
-    Storage[Persistent State]
-    style Blockchain fill:#00C1DE,stroke:black,stroke-width:2px,color:black
+    %% Core Services
+    NEAR[NEAR Integration]
+    Market[Market Data]
+    LLM[LLM Provider]
+    style NEAR fill:#00C1DE,stroke:black,stroke-width:2px,color:black
+    style Market fill:#00C1DE,stroke:black,stroke-width:2px,color:black
     style LLM fill:#00C1DE,stroke:black,stroke-width:2px,color:black
-    style Storage fill:#00C1DE,stroke:black,stroke-width:2px,color:black
+
+    %% Plugin Layer
+    subgraph Plugins[Agent Plugins]
+        direction TB
+        TokenTransfer[Token Transfer<br/>Plugin]
+        Arbitrage[Arbitrage<br/>Plugin]
+        Custom[Custom<br/>Plugins]
+
+        style TokenTransfer fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Arbitrage fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Custom fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+    end
+    style Plugins fill:none,stroke:#00C1DE,stroke-width:3px,color:white
 
     %% Swarm Intelligence Layer
-    subgraph Swarm[AI Swarm]
+    subgraph Swarm[Swarm Intelligence]
         direction TB
-        Analyzer[Market Analyzer<br/>Identifies Opportunities]
-        Risk[Risk Manager<br/>Validates Safety]
-        Strategy[Strategy Optimizer<br/>Improves Performance]
+        SwarmAgent[Swarm Agent]
+        Consensus[Consensus Building]
+        Evaluation[Multi-Agent Evaluation]
 
-        style Analyzer fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-        style Risk fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-        style Strategy fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style SwarmAgent fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Consensus fill:black,stroke:#00C1DE,stroke-width:2px,color:white
+        style Evaluation fill:black,stroke:#00C1DE,stroke-width:2px,color:white
     end
     style Swarm fill:none,stroke:#00C1DE,stroke-width:3px,color:white
 
-    %% Consensus Layer
-    subgraph Consensus[Consensus System]
-        direction TB
-        Voting[Voting Mechanism]
-        Confidence[Confidence Scoring]
-        
-        style Voting fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-        style Confidence fill:black,stroke:#00C1DE,stroke-width:2px,color:white
-    end
-    style Consensus fill:none,stroke:#00C1DE,stroke-width:3px,color:white
-
-    %% Core Connections
-    Core --> OnChain
-    Core --> AI
-    Core --> Memory
-    Core --> Swarm
-    Core --> Consensus
-
-    %% External Connections
-    OnChain <--> Blockchain
-    AI <--> LLM
-    Memory <--> Storage
-
-    %% Swarm Connections
-    Analyzer <--> Risk
-    Risk <--> Strategy
-    Strategy <--> Analyzer
-
-    %% Consensus Connections
-    Swarm <--> Consensus
+    %% Connections
+    Core --> Registry
+    Core --> Loader
+    Core --> Config
     
-    %% Labels
-    classDef label fill:none,stroke:none,color:white
-    class Core,OnChain,AI,Memory,Blockchain,LLM,Storage,Analyzer,Risk,Strategy,Voting,Confidence label
-
-    %% Title
-    classDef title fill:none,stroke:none,color:#00C1DE,font-size:18px
-    class Title title
+    Registry --> Plugins
+    Loader --> Plugins
+    
+    Plugins --> NEAR
+    Plugins --> Market
+    Plugins --> LLM
+    
+    Plugins --> Swarm
+    SwarmAgent --> Consensus
+    SwarmAgent --> Evaluation
 ```
+
+The architecture combines a flexible plugin system with swarm intelligence capabilities:
+
+1. **Plugin System Core**
+   - Plugin Registry for managing available plugins
+   - Plugin Loader for dynamic loading/unloading
+   - Configuration management with validation
+
+2. **Core Services**
+   - NEAR Protocol integration
+   - Market data feeds
+   - LLM provider interface
+
+3. **Agent Plugins**
+   - Token Transfer plugin for NEAR transactions
+   - Arbitrage plugin for market opportunities
+   - Custom plugins for specialized strategies
+
+4. **Swarm Intelligence**
+   - Swarm Agent for coordinated decision-making
+   - Consensus building through multi-agent voting
+   - Role-based evaluation with LLM reasoning
+
+This architecture enables:
+- Easy extension through plugins
+- Coordinated decision-making via swarm intelligence
+- Secure transaction handling
+- Market-aware operations
+- LLM-powered reasoning
 
 ### Project Structure
 ```bash
@@ -346,13 +398,11 @@ await main_agent.join_swarm([peer_agent])
 
 For more examples and reference implementations, check out our [examples directory](near_swarm/examples/):
 
-- [`simple_strategy.py`](near_swarm/examples/simple_strategy.py) - Basic multi-agent decision making
 - [`arbitrage_strategy.py`](near_swarm/examples/arbitrage_strategy.py) - Advanced DEX arbitrage
-- [`portfolio_advisor.py`](near_swarm/examples/portfolio_advisor.py) - Voice-powered portfolio management
 - [`demo.py`](near_swarm/examples/demo.py) - Interactive demo of all features
 
 Each example includes detailed comments and demonstrates different aspects of the framework.
-See our [Examples Guide](docs/examples.md) for detailed walkthroughs.
+See our [Examples Guide](docs/tutorial.md) for detailed walkthroughs.
 
 ## 📖 Documentation
 

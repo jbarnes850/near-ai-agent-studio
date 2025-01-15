@@ -157,4 +157,14 @@ class WebSearchManager:
         """Clean up resources."""
         if self._session and not self._session.closed:
             await self._session.close()
-            self._session = None 
+            self._session = None
+    
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self._get_session()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.close()
+        return None 

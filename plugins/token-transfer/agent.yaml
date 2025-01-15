@@ -1,0 +1,5 @@
+capabilities:
+- execute
+- evaluate
+name: token-transfer
+role: token-transfer_role

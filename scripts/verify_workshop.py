@@ -53,26 +53,22 @@ async def verify_environment():
         print("━━━━━━━━━━━━━━━━━━━━━━")
         
         # 1. Test Market Data
-        market = MarketDataManager()
-        await test_market_data(market)
+        async with MarketDataManager() as market:
+            await test_market_data(market)
         
         # 2. Test NEAR Connection
-        near = NEARConnection(
+        async with NEARConnection(
             network=network,
             account_id=account_id,
             private_key=private_key
-        )
-        await test_near_connection(near)
+        ) as near:
+            await test_near_connection(near)
         
         print("\n✅ All systems verified!")
         
     except Exception as e:
         print(f"\n❌ Verification failed: {str(e)}")
         raise
-    finally:
-        # Clean up resources
-        if 'market' in locals():
-            await market.close()
 
 if __name__ == "__main__":
     asyncio.run(verify_environment()) 

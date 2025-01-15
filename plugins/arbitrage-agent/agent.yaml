@@ -1,0 +1,5 @@
+capabilities:
+- execute
+- evaluate
+name: arbitrage-agent
+role: arbitrage-agent_role

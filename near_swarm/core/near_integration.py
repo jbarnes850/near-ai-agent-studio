@@ -10,12 +10,21 @@ from typing import Optional, Dict, Any, Union
 import aiohttp
 import asyncio
 from aiohttp.client_exceptions import ClientError
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
 RETRY_DELAY = 1  # seconds
 DEFAULT_GAS = 100_000_000_000_000  # 100 TGas
+
+class NEARConfig(BaseModel):
+    """NEAR connection configuration."""
+    network: str = Field(..., description="Network to connect to (testnet/mainnet)")
+    account_id: str = Field(..., description="NEAR account ID")
+    private_key: str = Field(..., description="Account private key")
+    node_url: Optional[str] = Field(None, description="Custom RPC endpoint")
+    use_backup: bool = Field(False, description="Use backup RPC endpoints")
 
 class NEARConnectionError(Exception):
     """Custom exception for NEAR connection errors."""
@@ -261,3 +270,40 @@ class NEARConnection:
         if self._session and not self._session.closed:
             await self._session.close()
             self._session = None
+    
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self._get_session()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.close()
+        return None
+
+async def create_near_connection(config: NEARConfig) -> NEARConnection:
+    """Create a new NEAR connection from configuration.
+    
+    Args:
+        config: NEARConfig instance with connection settings
+        
+    Returns:
+        Initialized NEARConnection instance
+    """
+    try:
+        connection = NEARConnection(
+            network=config.network,
+            account_id=config.account_id,
+            private_key=config.private_key,
+            node_url=config.node_url,
+            use_backup=config.use_backup
+        )
+        
+        # Test connection by checking account
+        await connection.check_account(config.account_id)
+        
+        return connection
+        
+    except Exception as e:
+        logger.error(f"Failed to create NEAR connection: {str(e)}")
+        raise NEARConnectionError(f"Connection failed: {str(e)}")

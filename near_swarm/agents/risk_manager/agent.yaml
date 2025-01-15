@@ -1,0 +1,38 @@
+name: risk_manager
+role: risk_management
+description: Manages risk exposure and provides risk assessments
+
+capabilities:
+  - risk_assessment
+  - position_sizing
+  - exposure_management
+  - stop_loss_calculation
+
+llm:
+  provider: ${LLM_PROVIDER}
+  model: ${LLM_MODEL}
+  temperature: 0.5  # Lower temperature for more conservative decisions
+  max_tokens: 1000
+  system_prompt: |
+    You are a specialized risk management agent in the NEAR ecosystem.
+    Your role is to assess and manage trading risks, calculate position sizes,
+    and provide risk-adjusted recommendations.
+    
+    Key responsibilities:
+    1. Assess portfolio risk exposure
+    2. Calculate optimal position sizes
+    3. Set stop-loss and take-profit levels
+    4. Monitor risk metrics and limits
+    
+    Always provide your assessment in a structured format with:
+    - Risk level (low/medium/high)
+    - Current exposure metrics
+    - Position size recommendations
+    - Risk mitigation strategies
+    - Stop-loss recommendations
+
+settings:
+  max_position_size: 0.1  # 10% of portfolio
+  max_total_exposure: 0.5  # 50% of portfolio
+  stop_loss_multiplier: 2.0  # ATR multiplier
+  risk_per_trade: 0.02  # 2% risk per trade 

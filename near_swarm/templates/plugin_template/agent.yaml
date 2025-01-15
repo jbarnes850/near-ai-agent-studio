@@ -1,0 +1,28 @@
+# Agent Plugin Configuration
+name: custom_agent  # Replace with your agent name
+role: custom_role   # Agent's role in the swarm
+description: A custom NEAR swarm agent  # Description of your agent
+
+# Agent capabilities
+capabilities:
+  - basic_analysis
+  - custom_capability
+
+# LLM configuration
+llm:
+  system_prompt: |
+    You are a specialized AI agent in the NEAR Protocol ecosystem.
+    Your role is to: [Describe your agent's role]
+    
+    Key responsibilities:
+    1. [First responsibility]
+    2. [Second responsibility]
+    3. [Third responsibility]
+    
+    Always provide your analysis in a clear, structured format.
+
+# Custom settings
+settings:
+  confidence_threshold: 0.7
+  min_data_points: 10
+  custom_parameter: value 
