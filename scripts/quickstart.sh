@@ -26,14 +26,21 @@ show_progress() {
 print_logo() {
     echo -e "${BLUE}"
     echo '
-███╗   ██╗███████╗ █████╗ ██████╗     ███████╗██╗    ██╗ █████╗ ██████╗ ███╗   ███╗
-████╗  ██║██╔════╝██╔══██╗██╔══██╗    ██╔════╝██║    ██║██╔══██╗██╔══██╗████╗ ████║
-██╔██╗ ██║█████╗  ███████║██████╔╝    ███████╗██║ █╗ ██║███████║██████╔╝██╔████╔██║
-██║╚██╗██║██╔══╝  ██╔══██║██╔══██╗    ╚════██║██║███╗██║██╔══██║██╔══██╗██║╚██╔╝██║
-██║ ╚████║███████╗██║  ██║██║  ██║    ███████║╚███╔███╔╝██║  ██║██║  ██║██║ ╚═╝ ██║
-╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝    ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝
+███╗   ██╗███████╗ █████╗ ██████╗      █████╗  ██████╗ ███████╗███╗   ██╗████████╗
+████╗  ██║██╔════╝██╔══██╗██╔══██╗    ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
+██╔██╗ ██║█████╗  ███████║██████╔╝    ███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║   
+██║╚██╗██║██╔══╝  ██╔══██║██╔══██╗    ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║   
+██║ ╚████║███████╗██║  ██║██║  ██║    ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║   
+╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝   
+
+███████╗████████╗██╗   ██╗██████╗ ██╗ ██████╗ 
+██╔════╝╚══██╔══╝██║   ██║██╔══██╗██║██╔═══██╗
+███████╗   ██║   ██║   ██║██║  ██║██║██║   ██║
+╚════██║   ██║   ██║   ██║██║  ██║██║██║   ██║
+███████║   ██║   ╚██████╔╝██████╔╝██║╚██████╔╝
+╚══════╝   ╚═╝    ╚═════╝ ╚═════╝ ╚═╝ ╚═════╝ 
 '
-    echo -e "${CYAN}🤖 Multi-Agent Systems on NEAR${NC}"
+    echo -e "${CYAN}🤖 Build Autonomous Agents on NEAR${NC}"
     echo ""
 }
 
@@ -47,19 +54,20 @@ check_command() {
 
 # Start script
 print_logo
-echo -e "${CYAN}Welcome to the NEAR Swarm Intelligence Workshop!${NC}"
-echo -e "This script will set up a complete multi-agent system demonstrating:"
-echo -e "• ${GREEN}Market Analysis${NC} - Price and volume evaluation"
-echo -e "• ${GREEN}Risk Management${NC} - Safety and exposure control"
-echo -e "• ${GREEN}Strategy Optimization${NC} - Performance tuning"
+echo -e "${CYAN}Welcome to NEAR Agent Studio!${NC}"
+echo -e "This starter kit helps you build autonomous agents that can:"
+echo -e "• ${GREEN}Interact with NEAR${NC} - Send transactions, check balances, monitor accounts"
+echo -e "• ${GREEN}Access Market Data${NC} - Real-time prices, trading volumes, market trends"
+echo -e "• ${GREEN}Make Decisions${NC} - LLM-powered reasoning and strategy execution"
 echo ""
-echo -e "${CYAN}This setup will:${NC}"
-echo "1. Configure your Python environment"
-echo "2. Set up your NEAR testnet account"
-echo "3. Initialize AI agents with different roles"
-echo "4. Run a demo showing multi-agent decision making"
+echo -e "${CYAN}Setup will:${NC}"
+echo "1. Configure your development environment"
+echo "2. Set up a NEAR testnet account for testing"
+echo "3. Install example agents to learn from"
+echo "4. Verify all integrations (NEAR, Market Data, LLM)"
+echo "5. Launch an interactive chat assistant to help create your first agent"
 echo ""
-echo -e "${CYAN}Press Enter when you're ready to begin...${NC}"
+echo -e "${CYAN}Press Enter to start building...${NC}"
 read -r
 
 # Check for virtual environment
@@ -186,15 +194,31 @@ echo -e "• ${GREEN}NEAR Connection${NC} - Connected to testnet"
 echo -e "• ${GREEN}Market Data${NC} - Price feeds active"
 echo -e "• ${GREEN}LLM Integration${NC} - Connected"
 
-# Success message
-section_header "🎉 Setup Complete!"
-echo -e "${GREEN}Your NEAR Swarm Intelligence environment is ready!${NC}"
+# Success message and transition to chat
+section_header "🎉 Ready to Build!"
+echo -e "${GREEN}Your NEAR Agent Studio environment is ready!${NC}"
 echo ""
-echo -e "${CYAN}Next steps:${NC}"
-echo "1. Create a new plugin: near-swarm plugins create my-plugin"
-echo "2. List available plugins: near-swarm plugins list"
-echo "3. Run examples:"
-echo "   • Token transfer: near-swarm execute token-transfer --operation transfer --recipient bob.testnet --amount 0.1"
-echo "   • Arbitrage: near-swarm execute arbitrage-agent --operation analyze --pair NEAR/USDC"
+echo -e "${CYAN}Starting interactive chat assistant to help you:${NC}"
+echo -e "1. Create your first price monitoring agent"
+echo -e "2. Add a decision-making agent"
+echo -e "3. Watch them collaborate in real-time"
+echo -e "4. Learn about advanced agent capabilities"
 echo ""
-echo -e "${BLUE}For help, run: near-swarm --help${NC}"
+echo -e "${CYAN}Press Enter to start the interactive experience...${NC}"
+read -r
+
+# Launch interactive chat
+section_header "💬 Starting Interactive Chat"
+echo -e "Tip: Type ${CYAN}/help${NC} to see available commands"
+echo -e "     Type ${CYAN}/exit${NC} to quit at any time\n"
+
+near-swarm chat --tutorial create-first-agent
+
+echo -e "\n${CYAN}Next steps:${NC}"
+echo "1. Explore more agent templates: near-swarm plugins list"
+echo "2. Create custom agents: near-swarm create agent my-agent"
+echo "3. Run advanced demos:"
+echo "   • Multi-agent trading: near-swarm demo trading"
+echo "   • Portfolio management: near-swarm demo portfolio"
+echo ""
+echo -e "${BLUE}Documentation: https://github.com/jbarnes850/near-ai-agent-studio${NC}"

@@ -1,28 +1,44 @@
-# Agent Plugin Configuration
-name: custom_agent  # Replace with your agent name
-role: custom_role   # Agent's role in the swarm
-description: A custom NEAR swarm agent  # Description of your agent
+# Agent Configuration Template
+# Use this template to configure your custom NEAR swarm agent
+
+# Basic agent configuration
+name: custom_agent
+role: market_analyzer  # market_analyzer or strategy_optimizer
+
+# LLM provider settings
+llm_provider: openai  # openai, anthropic, etc.
+llm_api_key: ${OPENAI_API_KEY}  # Use environment variable
+llm_model: gpt-4  # Model to use
+api_url: https://api.openai.com/v1  # API endpoint
 
 # Agent capabilities
 capabilities:
-  - basic_analysis
-  - custom_capability
+  - market_analysis
+  - risk_assessment
+  - decision_making
 
-# LLM configuration
-llm:
-  system_prompt: |
-    You are a specialized AI agent in the NEAR Protocol ecosystem.
-    Your role is to: [Describe your agent's role]
-    
-    Key responsibilities:
-    1. [First responsibility]
-    2. [Second responsibility]
-    3. [Third responsibility]
-    
-    Always provide your analysis in a clear, structured format.
+# System prompt for the agent
+system_prompt: |
+  You are a specialized AI agent in the NEAR swarm, focused on {role}.
+  
+  For market_analyzer role:
+  - Analyze NEAR token price movements and market conditions
+  - Identify trends and patterns
+  - Assess market sentiment and risks
+  - Provide clear, actionable insights
+  
+  For strategy_optimizer role:
+  - Evaluate market analysis and opportunities
+  - Optimize trading strategies based on risk tolerance
+  - Make data-driven decisions
+  - Recommend specific actions with rationale
+  
+  Always provide structured responses in JSON format with confidence levels.
+  Focus on clear, actionable insights while managing risks appropriately.
 
 # Custom settings
 settings:
-  confidence_threshold: 0.7
-  min_data_points: 10
-  custom_parameter: value 
+  min_confidence_threshold: 0.7  # Minimum confidence level for recommendations
+  risk_tolerance: medium  # low, medium, high
+  max_retries: 3  # Maximum retry attempts for failed operations
+  timeout: 30  # Operation timeout in seconds 
