@@ -109,12 +109,12 @@ near-swarm plugins list  # View available plugins
 ```mermaid
 graph TB
     %% Core System
-    Core[Plugin System]
+    Core[Agent Framework]
     style Core fill:black,stroke:#00C1DE,stroke-width:3px,color:white
 
     %% Plugin Management
-    Registry[Plugin Registry]
-    Loader[Plugin Loader]
+    Registry[Agent Registry]
+    Loader[Agent Loader]
     Config[Configuration]
     style Registry fill:black,stroke:#00C1DE,stroke-width:2px,color:white
     style Loader fill:black,stroke:#00C1DE,stroke-width:2px,color:white
@@ -171,11 +171,11 @@ graph TB
     SwarmAgent --> Evaluation
 ```
 
-The architecture combines a flexible plugin system with swarm intelligence capabilities:
+The architecture combines a flexible agent system with swarm intelligence capabilities:
 
-1. **Plugin System Core**
-   - Plugin Registry for managing available plugins
-   - Plugin Loader for dynamic loading/unloading
+1. **Agent Framework Core**
+   - Agent Registry for managing available plugins
+   - Agent Loader for dynamic loading/unloading
    - Configuration management with validation
 
 2. **Core Services**
@@ -184,9 +184,9 @@ The architecture combines a flexible plugin system with swarm intelligence capab
    - LLM provider interface
 
 3. **Agent Plugins**
-   - Token Transfer plugin for NEAR transactions
-   - Arbitrage plugin for market opportunities
-   - Custom plugins for specialized strategies
+   - Token Transfer agent for NEAR transactions
+   - Arbitrage agent for market opportunities
+   - Custom agents for specialized strategies
 
 4. **Swarm Intelligence**
    - Swarm Agent for coordinated decision-making
@@ -194,7 +194,7 @@ The architecture combines a flexible plugin system with swarm intelligence capab
    - Role-based evaluation with LLM reasoning
 
 This architecture enables:
-- Easy extension through plugins
+- Easy extension through agent plugins
 - Coordinated decision-making via swarm intelligence
 - Secure transaction handling
 - Market-aware operations
