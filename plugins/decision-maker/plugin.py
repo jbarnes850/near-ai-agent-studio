@@ -7,6 +7,8 @@ import logging
 from typing import Dict, Any, Optional
 from near_swarm.plugins.base import AgentPlugin, PluginConfig
 from near_swarm.core.agent import AgentConfig
+from near_swarm.core.near_integration import NEARConnection
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +60,9 @@ class DecisionMakerPlugin(AgentPlugin):
         """Evaluate market conditions and generate decision"""
         # Define risk thresholds based on risk tolerance
         risk_thresholds = {
-            'low': {'change': 0.03, 'confidence': 0.9},
-            'medium': {'change': 0.05, 'confidence': 0.8},
-            'high': {'change': 0.08, 'confidence': 0.7}
+            'low': {'change': 0.02, 'confidence': 0.85},
+            'medium': {'change': 0.04, 'confidence': 0.75},
+            'high': {'change': 0.06, 'confidence': 0.65}
         }
         
         threshold = risk_thresholds[self.risk_tolerance]
@@ -118,14 +120,18 @@ class DecisionMakerPlugin(AgentPlugin):
             
             action = "Recommended Action: "
             confidence = 0.0
+            action_type = ""
             
-            if abs(price_change) >= 0.1 and market_confidence >= 0.9:
+            if abs(price_change) >= 0.04 and market_confidence >= 0.8:
+                action_type = 'take_profit' if price_change > 0 else 'buy'
                 action += f"{'Take profit' if price_change > 0 else 'Buy the dip'} with tight stops. "
                 confidence = 0.85
-            elif abs(price_change) >= 0.05 and market_confidence >= 0.8:
+            elif abs(price_change) >= 0.02 and market_confidence >= 0.7:
+                action_type = 'scale_out' if price_change > 0 else 'scale_in'
                 action += f"{'Scale out' if price_change > 0 else 'Scale in'} gradually. "
                 confidence = 0.75
             else:
+                action_type = 'hold'
                 action += "Hold current positions and monitor for clearer signals. "
                 confidence = 0.65
                 
@@ -136,6 +142,7 @@ class DecisionMakerPlugin(AgentPlugin):
                 'strategy': strategy,
                 'rationale': rationale,
                 'action': action,
+                'action_type': action_type,
                 'confidence': confidence,
                 'risk_level': risk_level
             }
@@ -144,16 +151,48 @@ class DecisionMakerPlugin(AgentPlugin):
             self.logger.error(f"Error evaluating market data: {str(e)}")
             return {'error': str(e)}
             
-    async def execute(self, action: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute trading decisions"""
+    async def execute(self, decision: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a trading decision."""
         try:
-            if action.get('type') == 'evaluate_market':
-                return await self.evaluate(action.get('data', {}))
-            return {'error': 'Unsupported action type'}
+            # For testing, use a small amount (0.01 NEAR)
+            amount = 0.01
+            
+            # Initialize NEAR connection with required parameters
+            from near_swarm.core.near_integration import NEARConfig, create_near_connection
+            from dotenv import load_dotenv
+            import os
+            
+            load_dotenv()
+            
+            config = NEARConfig(
+                network=os.getenv('NEAR_NETWORK', 'testnet'),
+                account_id=os.getenv('NEAR_ACCOUNT_ID'),
+                private_key=os.getenv('NEAR_PRIVATE_KEY')
+            )
+            
+            near = await create_near_connection(config)
+            
+            # Execute transaction
+            result = await near.send_transaction(
+                receiver_id="app.nearcrowd.near",  # Example receiver
+                amount=amount
+            )
+            
+            return {
+                "status": "success",
+                "transaction": result
+            }
             
         except Exception as e:
-            self.logger.error(f"Error executing action: {str(e)}")
-            return {'error': str(e)}
+            logger.error(f"Transaction failed: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+            
+        finally:
+            if 'near' in locals():
+                await near.close()
             
     async def cleanup(self) -> None:
         """Cleanup resources"""

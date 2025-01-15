@@ -184,9 +184,26 @@ def run(agents, timeout):
                             if decision.get("confidence", 0) > 0.8:
                                 click.echo(f"\n✨ High Confidence Decision:")
                                 click.echo(f"  {decision.get('action', 'No action needed')}")
+                                
+                                # Execute the decision if confidence is high
+                                execution_result = await loaded_agents[1].execute({
+                                    'type': 'evaluate_market',
+                                    'data': {
+                                        'market_analysis': analysis,
+                                        'current_price': near_price
+                                    }
+                                })
+                                
+                                # Show transaction details if available
+                                if 'transaction' in execution_result:
+                                    tx = execution_result['transaction']
+                                    click.echo(f"\n🔄 Executing Trade:")
+                                    click.echo(f"  • Amount: {tx['amount']} NEAR")
+                                    click.echo(f"  • Status: {tx['status']}")
+                                    click.echo(f"  • View Transaction: {tx['explorer_url']}")
                     
-                    click.echo("\n⏳ Waiting 5 seconds before next analysis...")
-                    await asyncio.sleep(5)
+                    click.echo("\n⏳ Waiting 60 seconds before next analysis...")
+                    await asyncio.sleep(60)
                     
             except KeyboardInterrupt:
                 click.echo("\n👋 Stopping agents gracefully...")

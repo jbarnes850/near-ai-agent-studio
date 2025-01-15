@@ -296,32 +296,88 @@ Your development environment is ready for AI agents!
             click.echo("Usage: run_agents <agent1> <agent2> ...")
             return
 
-        cmd = ['near-swarm', 'run'] + list(args)
         click.echo("\n🌐 Launching AI Agent Swarm...")
+        click.echo(f"Starting agents: {', '.join(args)}")
 
-        try:
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
-                bufsize=1
-            )
-
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    await self._process_agent_output(output.strip())
-
-            if process.returncode != 0:
-                error = process.stderr.read().strip()
-                if error:
-                    click.echo(click.style(f"\n❌ Error: {error}", fg='red'))
+        # Load plugins first
+        loaded_plugins = await self.plugin_loader.load_all_plugins()
+        for agent in args:
+            if agent in loaded_plugins:
+                click.echo(f"✅ Loaded agent: {agent} ({loaded_plugins[agent].__class__.__name__})")
+            else:
+                click.echo(click.style(f"❌ Failed to load agent: {agent}", fg='red'))
                 return
 
+        try:
+            # Initialize market data
+            async with MarketDataManager() as market:
+                price_data = await market.get_token_price('near')
+                click.echo(f"\n📊 Current NEAR Price: ${price_data['price']:.2f}")
+
+                while True:
+                    # Price Monitor Analysis
+                    click.echo("\n🔍 Price Monitor thinking...")
+                    click.echo("Sending request to agent for market analysis...")
+                    
+                    price_monitor = loaded_plugins.get('price-monitor')
+                    if price_monitor:
+                        analysis = await price_monitor.evaluate({
+                            'current_price': price_data['price'],
+                            'change_24h': price_data['24h_change']
+                        })
+                        
+                        if analysis:
+                            click.echo("\n\n🔍 📝 Analysis from agent:")
+                            for key, value in analysis.items():
+                                if key != 'confidence':
+                                    click.echo(f"• {key.title()}: {value}")
+                            click.echo(f"• Confidence: {int(analysis.get('confidence', 0) * 100)}%")
+
+                    # Decision Maker Evaluation
+                    click.echo("\n🤔 Decision Maker consulting agent...")
+                    click.echo("Sending market analysis to agent for strategic evaluation...")
+                    
+                    decision_maker = loaded_plugins.get('decision-maker')
+                    if decision_maker:
+                        decision = await decision_maker.evaluate({
+                            'market_analysis': analysis,
+                            'current_price': price_data['price']
+                        })
+                        
+                        if decision:
+                            click.echo("\n\n🤔 📋 Strategic Decision from agent analysis:")
+                            for key, value in decision.items():
+                                if key not in ['confidence', 'action_type']:
+                                    click.echo(f"• {key.title()}: {value}")
+                            click.echo(f"• Confidence: {int(decision.get('confidence', 0) * 100)}%")
+
+                            # Execute high confidence decisions
+                            if decision.get('confidence', 0) >= 0.75:
+                                click.echo("\n✨ High Confidence Decision:")
+                                click.echo(decision.get('action', ''))
+                                
+                                # Execute the decision
+                                try:
+                                    result = await decision_maker.execute(decision)
+                                    if result.get('transaction'):
+                                        tx_info = result['transaction']
+                                        if tx_info['status'] == 'success':
+                                            click.echo(click.style(f"\n🎯 Transaction executed: {tx_info['explorer_url']}", fg='green'))
+                                        else:
+                                            click.echo(click.style(f"\n❌ Transaction failed: {tx_info.get('error', 'Unknown error')}", fg='red'))
+                                except Exception as e:
+                                    logger.error(f"Error executing decision: {str(e)}")
+                                    logger.exception("Full traceback:")
+
+                    click.echo("\n⏳ Waiting 60 seconds before next analysis...")
+                    await asyncio.sleep(60)
+
+        except asyncio.CancelledError:
+            logger.info("Agent execution cancelled")
+            raise
         except Exception as e:
+            logger.error(f"Error in agent execution: {str(e)}")
+            logger.exception("Full traceback:")
             click.echo(click.style(f"\n❌ Agent execution failed: {str(e)}", fg='red'))
 
     async def _process_agent_output(self, output: str) -> None:
@@ -333,19 +389,54 @@ Your development environment is ready for AI agents!
             elif "Decision from agent" in output:
                 self.metrics['decisions_made'] += 1
                 click.echo(click.style(f"\n🤔 {output}", fg='blue'))
+                logger.debug(f"Processing decision output: {output}")
+                
+                # Extract decision details
+                if "Take profit" in output and "Confidence: 85%" in output:
+                    click.echo("\n✨ High Confidence Decision:")
+                    action_text = output.split("Action:")[1].strip()
+                    click.echo(action_text)
+                    
+                    # Trigger execution
+                    decision = {
+                        'action_type': 'take_profit',
+                        'confidence': 0.85,
+                        'action': action_text
+                    }
+                    logger.debug(f"Created decision object: {decision}")
+                    
+                    # Execute the decision
+                    try:
+                        logger.debug("Attempting to execute decision...")
+                        if 'decision-maker' not in self.plugin_loader.plugins:
+                            logger.error("Decision maker plugin not found!")
+                            return
+                            
+                        plugin = self.plugin_loader.plugins['decision-maker']
+                        logger.debug(f"Found decision maker plugin: {plugin}")
+                        
+                        result = await plugin.execute(decision)
+                        logger.debug(f"Execution result: {result}")
+                        
+                        if result.get('transaction'):
+                            tx_info = result['transaction']
+                            if tx_info['status'] == 'success':
+                                click.echo(click.style(f"\n🎯 Transaction executed: {tx_info['explorer_url']}", fg='green'))
+                            else:
+                                click.echo(click.style(f"\n❌ Transaction failed: {tx_info.get('error', 'Unknown error')}", fg='red'))
+                    except Exception as e:
+                        logger.error(f"Error executing decision: {str(e)}")
+                        logger.exception("Full traceback:")
+                
             elif "Message exchanged" in output:
                 self.metrics['messages_exchanged'] += 1
                 click.echo(click.style(f"\n💬 {output}", fg='green'))
             else:
                 click.echo(output)
 
-            # Remove metrics display from normal flow
-            # Only show metrics when explicitly requested via /status command
-            # if sum(self.metrics.values()) % 5 == 0:
-            #     self._display_metrics()
-
         except Exception as e:
             logger.error(f"Error processing output: {str(e)}")
+            logger.exception("Full traceback:")
             click.echo(output)
 
     def _display_metrics(self) -> None:

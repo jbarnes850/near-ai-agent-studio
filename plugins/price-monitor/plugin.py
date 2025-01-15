@@ -48,17 +48,17 @@ class PriceMonitorPlugin(AgentPlugin):
                 'data': {
                     'price': price_data['price'],
                     'timestamp': price_data['timestamp'],
-                    'change_24h': price_data.get('change_24h', 0),
+                    'change_24h': price_data.get('24h_change', 0),
                     'confidence': 0.95
                 }
             }
             
             # Check for significant price changes
-            if abs(price_data.get('change_24h', 0)) >= self.alert_threshold:
+            if abs(price_data.get('24h_change', 0)) >= self.alert_threshold:
                 response['alert'] = {
                     'type': 'price_movement',
-                    'severity': 'high' if abs(price_data['change_24h']) >= 0.1 else 'medium',
-                    'message': f"Significant price movement detected: {price_data['change_24h']}%"
+                    'severity': 'high' if abs(price_data['24h_change']) >= 0.1 else 'medium',
+                    'message': f"Significant price movement detected: {price_data['24h_change']}%"
                 }
             
             return response
@@ -75,7 +75,7 @@ class PriceMonitorPlugin(AgentPlugin):
                 return {'error': 'Failed to get price data'}
             
             price = price_data['price']
-            change_24h = price_data.get('change_24h', 0)
+            change_24h = price_data.get('24h_change', 0)
             
             # Detailed market analysis
             observation = f"I observe that NEAR is currently trading at ${price:.2f}, with a {change_24h:.1f}% change in the last 24 hours. "

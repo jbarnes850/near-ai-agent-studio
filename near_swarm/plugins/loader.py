@@ -24,11 +24,15 @@ class PluginLoader:
         """Scan and load all available plugins."""
         # Search paths for plugins
         search_paths = [
-            ("near_swarm/agents", "plugin.py"),  # Look for plugin.py in subdirectories
-            ("agents/custom", "plugin.py"),
-            ("near_swarm/examples", "*_strategy.py"),
             ("plugins", "plugin.py")  # Look for plugin.py in subdirectories
         ]
+        
+        # Only load specific plugins
+        allowed_plugins = {
+            'price-monitor',
+            'decision-maker',
+            'token-transfer'
+        }
         
         # Track found plugins
         found_plugins = set()
@@ -40,13 +44,8 @@ class PluginLoader:
                     if pattern == "plugin.py" and pattern in files:
                         # Extract plugin name from directory
                         plugin_name = os.path.basename(root)
-                        found_plugins.add(plugin_name)
-                    elif pattern.endswith("_strategy.py"):
-                        # Extract plugin name from strategy files
-                        for file in files:
-                            if file.endswith("_strategy.py"):
-                                plugin_name = file.replace("_strategy.py", "").replace("_", "-")
-                                found_plugins.add(plugin_name)
+                        if plugin_name in allowed_plugins:
+                            found_plugins.add(plugin_name)
         
         # Load each found plugin
         for plugin_name in found_plugins:
