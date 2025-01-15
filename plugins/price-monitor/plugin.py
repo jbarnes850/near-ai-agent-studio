@@ -68,23 +68,47 @@ class PriceMonitorPlugin(AgentPlugin):
             return None
             
     async def evaluate(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Evaluate market conditions"""
+        """Evaluate market conditions with detailed natural language analysis"""
         try:
             price_data = await self.get_price_data()
             if not price_data:
                 return {'error': 'Failed to get price data'}
             
-            evaluation = {
-                'price': price_data['price'],
-                'change_24h': price_data.get('change_24h', 0),
+            price = price_data['price']
+            change_24h = price_data.get('change_24h', 0)
+            
+            # Detailed market analysis
+            observation = f"I observe that NEAR is currently trading at ${price:.2f}, with a {change_24h:.1f}% change in the last 24 hours. "
+            if abs(change_24h) >= self.alert_threshold:
+                observation += f"This represents a significant {'increase' if change_24h > 0 else 'decrease'} in price, exceeding our alert threshold of {self.alert_threshold*100}%."
+            else:
+                observation += "The price movement is within normal trading ranges."
+                
+            reasoning = f"Analyzing this price action: The {abs(change_24h):.1f}% {'upward' if change_24h > 0 else 'downward'} movement "
+            if abs(change_24h) >= 0.1:
+                reasoning += "indicates high market volatility. This could be due to significant market events, news, or large trading volumes. "
+            elif abs(change_24h) >= 0.05:
+                reasoning += "suggests moderate market activity. This might be normal market dynamics or early signs of a trend forming. "
+            else:
+                reasoning += "shows relatively stable market conditions. This could indicate a period of consolidation or low trading activity. "
+                
+            conclusion = "Based on the analysis, "
+            if abs(change_24h) >= 0.1:
+                conclusion += f"the market is showing {'bullish' if change_24h > 0 else 'bearish'} momentum with high volatility. Traders should exercise caution and consider risk management strategies."
+            elif abs(change_24h) >= 0.05:
+                conclusion += f"there's a moderate {'upward' if change_24h > 0 else 'downward'} trend developing. This might present opportunities while maintaining reasonable risk levels."
+            else:
+                conclusion += "the market appears stable. This could be a good time for accumulation or position adjustment with lower risk."
+            
+            return {
+                'observation': observation,
+                'reasoning': reasoning,
+                'conclusion': conclusion,
+                'price': price,
+                'change_24h': change_24h,
                 'confidence': 0.95,
-                'risk_level': 'low'
+                'risk_level': 'high' if abs(change_24h) >= 0.1 else 'medium' if abs(change_24h) >= 0.05 else 'low'
             }
-            
-            if abs(price_data.get('change_24h', 0)) >= self.alert_threshold:
-                evaluation['risk_level'] = 'high' if abs(price_data['change_24h']) >= 0.1 else 'medium'
-            
-            return evaluation
             
         except Exception as e:
             self.logger.error(f"Error evaluating market conditions: {str(e)}")

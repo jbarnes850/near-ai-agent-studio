@@ -90,19 +90,55 @@ class DecisionMakerPlugin(AgentPlugin):
             }
             
     async def evaluate(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Evaluate market data and make strategic decisions"""
+        """Evaluate market analysis and provide strategic decisions with detailed reasoning"""
         try:
-            if not context.get('price_data'):
-                return {'error': 'No price data provided'}
+            market_analysis = context.get('market_analysis', {})
+            current_price = context.get('current_price', 0)
+            
+            # Extract market insights
+            price_change = market_analysis.get('change_24h', 0)
+            risk_level = market_analysis.get('risk_level', 'medium')
+            market_confidence = market_analysis.get('confidence', 0)
+            
+            # Detailed strategic analysis
+            context_analysis = f"I'm analyzing the NEAR market at ${current_price:.2f}. The price monitor indicates a {abs(price_change):.1f}% {'increase' if price_change > 0 else 'decrease'} "
+            context_analysis += f"with {market_confidence*100:.0f}% confidence. Market risk is assessed as {risk_level}. "
+            
+            strategy = "Given these conditions, "
+            if risk_level == 'high':
+                strategy += "I recommend a cautious approach. High market volatility requires strict risk management and smaller position sizes. "
+            elif risk_level == 'medium':
+                strategy += "a balanced strategy is appropriate. We can explore opportunities while maintaining moderate risk controls. "
+            else:
+                strategy += "we can be more opportunistic. Lower risk levels allow for larger positions with appropriate stops. "
                 
-            price_data = context['price_data']
-            price_change = price_data.get('change_24h', 0)
-            current_price = price_data.get('price', 0)
+            rationale = f"My reasoning is based on: 1) The significant {'upward' if price_change > 0 else 'downward'} price movement, "
+            rationale += f"2) The {risk_level} risk assessment from market analysis, and "
+            rationale += f"3) Our {'conservative' if self.risk_tolerance == 'low' else 'balanced' if self.risk_tolerance == 'medium' else 'aggressive'} risk tolerance setting. "
             
-            decision = self._evaluate_market_conditions(price_change, current_price)
-            decision['context'] = context
+            action = "Recommended Action: "
+            confidence = 0.0
             
-            return decision
+            if abs(price_change) >= 0.1 and market_confidence >= 0.9:
+                action += f"{'Take profit' if price_change > 0 else 'Buy the dip'} with tight stops. "
+                confidence = 0.85
+            elif abs(price_change) >= 0.05 and market_confidence >= 0.8:
+                action += f"{'Scale out' if price_change > 0 else 'Scale in'} gradually. "
+                confidence = 0.75
+            else:
+                action += "Hold current positions and monitor for clearer signals. "
+                confidence = 0.65
+                
+            action += f"Set stops at {abs(price_change)*1.5:.1f}% {'below entry' if price_change > 0 else 'above entry'} for risk management."
+            
+            return {
+                'context': context_analysis,
+                'strategy': strategy,
+                'rationale': rationale,
+                'action': action,
+                'confidence': confidence,
+                'risk_level': risk_level
+            }
             
         except Exception as e:
             self.logger.error(f"Error evaluating market data: {str(e)}")

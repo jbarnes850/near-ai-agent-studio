@@ -339,9 +339,10 @@ Your development environment is ready for AI agents!
             else:
                 click.echo(output)
 
-            # Show metrics periodically
-            if sum(self.metrics.values()) % 5 == 0:
-                self._display_metrics()
+            # Remove metrics display from normal flow
+            # Only show metrics when explicitly requested via /status command
+            # if sum(self.metrics.values()) % 5 == 0:
+            #     self._display_metrics()
 
         except Exception as e:
             logger.error(f"Error processing output: {str(e)}")
