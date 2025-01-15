@@ -10,75 +10,12 @@ A production-ready starter kit for building AI agents and multi-agent swarms on 
 [![Hyperbolic](https://img.shields.io/badge/LLM-Hyperbolic-purple.svg)](https://hyperbolic.xyz)
 [![Lava Network](https://img.shields.io/badge/RPC-Lava%20Network-orange.svg)](https://www.lavanet.xyz/get-started/near)
 
-## Table of Contents
-1. [Overview](#overview)
-2. [Features](#features)
-3. [Getting Started](#-getting-started)
-4. [Core Components](#-core-components)
-5. [Interactive Features](#-interactive-features)
-6. [Examples](#-examples)
-7. [Documentation](#-documentation)
-8. [Contributing](#-contributing)
-
 ## Overview
 
 The NEAR AI Agent Studio is an educational and interactive starter kit designed for developers looking to build AI-powered applications on NEAR. It combines three powerful paradigms:
 - 🧠 Multi-agent swarm intelligence for collaborative decision-making
 - 🗣️ Voice-powered agents for portfolio management and market analysis
 - 💬 Interactive chat with autonomous agents for onchain actions
-
-## 🔥 Features
-
-### 🧠 Swarm Intelligence
-
-Swarm intelligence enables multiple specialized agents to collaborate for better outcomes:
-
-- **Market Analyzer** agents evaluate price data and trading volumes
-- **Risk Manager** agents assess potential risks and exposure
-- **Strategy Optimizer** agents fine-tune execution parameters
-
-These agents work together through:
-1. Expertise-based evaluation
-2. Confidence scoring
-3. Transparent reasoning
-4. Consensus building
-
-### 🎙️ Interactive Voice Assistant
-
-Natural language interaction with your NEAR portfolio:
-- Real-time market analysis and insights
-- Portfolio balance monitoring
-- Transaction history tracking
-- Voice-powered trading suggestions
-- Market sentiment analysis
-
-### 🤖 Multi-Agent Strategy
-
-Watch specialized AI agents collaborate in real-time:
-
-1. **Market Analysis Phase**
-   - Price trend evaluation
-   - Volume analysis
-   - Market sentiment assessment
-   - Network monitoring
-
-2. **Risk Management Phase**
-   - Transaction risk assessment
-   - Portfolio exposure analysis
-   - Network security validation
-   - Gas optimization
-
-3. **Strategy Optimization Phase**
-   - Parameter fine-tuning
-   - Execution timing
-   - Slippage prediction
-   - Cost-benefit analysis
-
-4. **Consensus Building**
-   - Multi-agent voting
-   - Confidence scoring
-   - Detailed reasoning
-   - Transparent decisions
 
 ## ⚡️ Getting Started
 
@@ -159,31 +96,6 @@ python near_swarm/examples/demo.py chat    # Interactive chat
 near-swarm create agent my-agent
 near-swarm plugins list  # View available plugins
 ```
-
-### Troubleshooting
-
-If you encounter any issues:
-
-1. Ensure all dependencies are installed:
-```bash
-pip install -e ".[dev]"  # Install with development dependencies
-```
-
-2. Verify your Python version:
-```bash
-python --version  # Should be 3.12 or higher
-```
-
-3. Check your configuration:
-```bash
-near-swarm config show  # View current configuration
-```
-
-4. Common issues:
-- "Command not found": Ensure virtual environment is activated
-- Import errors: Verify installation with `pip list`
-- API errors: Check your API keys in `.env`
-- Git errors: Install git with `apt install git` or `brew install git`
 
 ## Core Components
 
