@@ -10,6 +10,7 @@ A production-ready starter kit for building AI agents and multi-agent swarms on 
 [![Hyperbolic](https://img.shields.io/badge/LLM-Hyperbolic-purple.svg)](https://hyperbolic.xyz)
 [![Lava Network](https://img.shields.io/badge/RPC-Lava%20Network-orange.svg)](https://www.lavanet.xyz/get-started/near)
 
+
 ![NEAR AI Agent Studio](./public/near-agent-studio.png)
 
 ## ⚡️ Getting Started
@@ -88,6 +89,7 @@ cp .env.example .env
 # - LLM_PROVIDER=hyperbolic
 # - LLM_API_KEY=your-api-key
 ```
+
 ## Core Components
 
 > **Tip**: Start with modifying the examples in `near_swarm/examples/` to understand the framework.
@@ -162,10 +164,16 @@ graph TB
     SwarmAgent --> Evaluation
 ```
 
+
 The architecture combines a flexible agent framework with swarm intelligence capabilities:
 
 1. **Agent Framework Core**
    - Agent Registry for managing available agents
+
+The architecture combines a flexible agent system with swarm intelligence capabilities:
+
+1. **Agent Framework Core**
+   - Agent Registry for managing available plugins
    - Agent Loader for dynamic loading/unloading
    - Configuration management with validation
 
@@ -212,6 +220,21 @@ near-swarm-intelligence/
 ```
 
 ## 🛠️ Development Guide
+
+### Running Demos
+```bash
+# Run all demos
+python near_swarm/examples/demo.py all
+
+# Run specific components
+python near_swarm/examples/demo.py voice    # Voice assistant
+python near_swarm/examples/demo.py strategy # Multi-agent strategy
+python near_swarm/examples/demo.py chat    # Interactive chat
+
+# Create your first agent
+near-swarm create agent my-agent
+near-swarm plugins list  # View available plugins
+```
 
 ### Creating Your First Agent
 
