@@ -45,7 +45,7 @@ strategy:
 # LLM Provider (required)
 export LLM_PROVIDER=hyperbolic
 export LLM_API_KEY=your_api_key
-export LLM_MODEL=meta-llama/llama-3.3-70b-instruct
+export LLM_MODEL=meta-llama/llama-3.3-70B-instruct
 
 # NEAR Network (optional)
 export NEAR_NETWORK=testnet
