@@ -1,6 +1,6 @@
 # NEAR AI Agent Studio
 
-A production-ready starter kit for building AI agents and multi-agent swarms on NEAR. This template provides the essential building blocks for creating autonomous agents that can interact with the NEAR blockchain, make decisions using LLMs, and collaborate in swarms. The NEAR AI Agent Studio is an educational and interactive starter kit designed for developers looking to build AI agents and agentic applications on NEAR. 
+A production-ready starter kit for building AI agents and multi-agent swarms on NEAR. This template provides the essential building blocks for creating autonomous agents that can interact with the NEAR blockchain, make decisions using LLMs, and collaborate in swarms. The NEAR AI Agent Studio is an educational and interactive starter kit designed for developers looking to build AI agents and agentic applications on NEAR.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NEAR](https://img.shields.io/badge/NEAR-Protocol-blue.svg)](https://near.org)
@@ -9,6 +9,9 @@ A production-ready starter kit for building AI agents and multi-agent swarms on 
 [![PyPI version](https://img.shields.io/badge/PyPI-0.1.0-blue.svg)](https://pypi.org/project/near-swarm/)
 [![Hyperbolic](https://img.shields.io/badge/LLM-Hyperbolic-purple.svg)](https://hyperbolic.xyz)
 [![Lava Network](https://img.shields.io/badge/RPC-Lava%20Network-orange.svg)](https://www.lavanet.xyz/get-started/near)
+
+
+![NEAR AI Agent Studio](./public/near-agent-studio.png)
 
 ## ⚡️ Getting Started
 
@@ -35,9 +38,6 @@ Before you begin, ensure you have:
 - Hyperbolic API key for LLM capabilities
   - Sign up at [hyperbolic.xyz](https://hyperbolic.xyz)
   - Free tier available for development
-- ElevenLabs API key for voice features (optional)
-  - Register at [elevenlabs.io](https://elevenlabs.io)
-  - Free tier includes basic voice synthesis
 
 ### Quick Start
 ```bash
@@ -57,6 +57,26 @@ chmod +x scripts/quickstart.sh  # Make script executable
 ./scripts/quickstart.sh
 ```
 
+The quickstart script will:
+1. Set up your development environment
+2. Create a NEAR testnet account
+3. Install example agents
+4. Launch an interactive chat assistant to help you create your first agent
+
+### Interactive Chat
+After setup, you'll enter an interactive chat session where you can:
+- Create new agents with `/create agent <name>`
+- Configure agents with `/config agent <name>`
+- Run multiple agents together with `/run-agents`
+- List available agents with `/list`
+- Get help anytime with `/help`
+
+Start the chat manually anytime:
+```bash
+near-swarm chat  # Regular mode
+near-swarm chat --tutorial create-first-agent  # Guided tutorial
+```
+
 ### Environment Setup
 ```bash
 # Copy environment template
@@ -68,11 +88,6 @@ cp .env.example .env
 # - NEAR_PRIVATE_KEY=your-private-key
 # - LLM_PROVIDER=hyperbolic
 # - LLM_API_KEY=your-api-key
-# Optional:
-# - ELEVENLABS_API_KEY=your-key  # For voice features
-
-# Verify installation
-near-swarm config validate
 ```
 
 ## Core Components
@@ -149,6 +164,12 @@ graph TB
     SwarmAgent --> Evaluation
 ```
 
+
+The architecture combines a flexible agent framework with swarm intelligence capabilities:
+
+1. **Agent Framework Core**
+   - Agent Registry for managing available agents
+
 The architecture combines a flexible agent system with swarm intelligence capabilities:
 
 1. **Agent Framework Core**
@@ -170,6 +191,13 @@ The architecture combines a flexible agent system with swarm intelligence capabi
    - Swarm Agent for coordinated decision-making
    - Consensus building through multi-agent voting
    - Role-based evaluation with LLM reasoning
+
+This architecture enables:
+- Easy extension through agent plugins
+- Coordinated decision-making via swarm intelligence
+- Secure transaction handling
+- Market-aware operations
+- LLM-powered reasoning
 
 ### Project Structure
 ```bash
@@ -255,42 +283,6 @@ peer_agent = SwarmAgent(config, SwarmConfig(role="risk_manager"))
 # Form swarm
 await main_agent.join_swarm([peer_agent])
 ```
-
-## 📚 Interactive Features
-
-### Voice Commands
-- Portfolio queries
-- Market analysis
-- Transaction requests
-- Strategy suggestions
-
-### Chat Commands
-- Market Analysis
-  ```bash
-  /market [symbol]  # Get market analysis
-  /trend [timeframe]  # Get trend analysis
-  /volume [symbol]  # Volume analysis
-  ```
-
-- Risk Management
-  ```bash
-  /risk [action]  # Risk assessment
-  /balance  # Check portfolio balance
-  /positions  # List open positions
-  ```
-
-- Strategy
-  ```bash
-  /strategy [action]  # Strategy suggestions
-  /portfolio  # Portfolio overview
-  ```
-
-- Development Tools
-  ```bash
-  /ws  # Manage workspace
-  /env  # Configure environment
-  /config  # View/modify settings
-  ```
 
 ## 📄 Examples
 

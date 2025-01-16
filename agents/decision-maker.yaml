@@ -1,0 +1,30 @@
+name: decision-maker
+environment: development
+log_level: INFO
+
+llm:
+  provider: hyperbolic
+  api_key: ${LLM_API_KEY}
+  model: ${LLM_MODEL}
+  temperature: 0.7
+  max_tokens: 2000
+  api_url: ${LLM_API_URL}
+
+plugins:
+  - name: decision-maker
+    role: strategy_optimizer
+    capabilities:
+      - strategy_optimization
+      - decision_making
+      - risk_management
+    custom_settings:
+      min_confidence_threshold: 0.8
+      risk_tolerance: medium
+      max_retries: 3
+      timeout: 30
+      decision_interval: 300
+      risk_threshold: 0.1
+
+custom_settings:
+  environment: development
+  log_level: INFO 

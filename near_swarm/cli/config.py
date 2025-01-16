@@ -16,6 +16,47 @@ def config():
     """Configuration management commands"""
     pass
 
+@config.group()
+def agent():
+    """Agent configuration commands"""
+    pass
+
+@agent.command(name='configure')
+@click.argument('name')
+@click.option('--role', help='Agent role (e.g., market_analyzer, risk_manager)')
+@click.option('--min-confidence', type=float, help='Minimum confidence threshold')
+@click.option('--max-retries', type=int, help='Maximum number of retries')
+def configure_agent(name: str, role: Optional[str] = None, min_confidence: Optional[float] = None, max_retries: Optional[int] = None):
+    """Configure an agent"""
+    try:
+        # Load existing config or create new
+        config_file = f"agents/custom/{name}/agent.yaml"
+        config = {}
+        
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
+                config = yaml.safe_load(f) or {}
+        
+        # Update configuration
+        if role:
+            config['role'] = role
+        if min_confidence:
+            config['min_confidence'] = min_confidence
+        if max_retries:
+            config['max_retries'] = max_retries
+            
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(config_file), exist_ok=True)
+        
+        # Save configuration
+        with open(config_file, 'w') as f:
+            yaml.dump(config, f, default_flow_style=False)
+            
+        click.echo(f"✅ Configured agent: {name}")
+        
+    except Exception as e:
+        click.echo(f"❌ Error configuring agent: {str(e)}")
+
 @config.command()
 @click.argument('config_file', required=False)
 def validate(config_file: Optional[str] = None):
@@ -56,6 +97,9 @@ def validate(config_file: Optional[str] = None):
             if env_vars:
                 click.echo("\nEnvironment variables:")
                 for key, value in env_vars.items():
+                    # Mask sensitive values
+                    if 'KEY' in key or 'SECRET' in key:
+                        value = '*' * 8
                     click.echo(f"  {key}: {value}")
             
         except ValidationError as e:
@@ -67,21 +111,6 @@ def validate(config_file: Optional[str] = None):
             
     except Exception as e:
         click.echo(f"Error validating configuration: {str(e)}", err=True)
-
-@config.command()
-def show():
-    """Show current configuration"""
-    try:
-        loader = ConfigLoader()
-        loader.load_defaults()
-        loader.load_config_file()
-        loader.load_env()
-        
-        config = loader.get_config()
-        click.echo(yaml.dump(config.dict(), default_flow_style=False))
-        
-    except Exception as e:
-        click.echo(f"Error showing configuration: {str(e)}", err=True)
 
 @config.command()
 def init():
@@ -119,4 +148,21 @@ def init():
         click.echo("3. Run 'near-swarm config validate' to verify")
         
     except Exception as e:
-        click.echo(f"Error creating configuration: {str(e)}", err=True) 
+        click.echo(f"Error creating configuration: {str(e)}", err=True)
+
+@config.command()
+def show():
+    """Show current configuration"""
+    try:
+        loader = ConfigLoader()
+        loader.load_defaults()
+        loader.load_config_file()
+        loader.load_env()
+        
+        config = loader.get_config()
+        config_dict = config.dict()
+        
+        click.echo(yaml.dump(config_dict, default_flow_style=False))
+        
+    except Exception as e:
+        click.echo(f"Error showing configuration: {str(e)}") 

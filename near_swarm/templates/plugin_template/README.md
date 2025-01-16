@@ -1,109 +1,125 @@
-# NEAR Swarm Agent Plugin Template
+# NEAR Agent Template
 
-This template helps you create custom agents for the NEAR Swarm Intelligence framework.
+This template helps you create specialized agents for the NEAR ecosystem. It includes built-in support for market analysis, strategy optimization, and custom agent roles.
 
-## Getting Started
+## Available Roles
 
-1. Copy this template directory:
-```bash
-near-swarm create agent my-agent
-```
+### Market Analyzer
+The market analyzer role focuses on monitoring NEAR token prices and market conditions. It provides:
+- Real-time price analysis
+- Market sentiment evaluation
+- Risk assessment
+- Trend identification
 
-2. Configure your agent in `agent.yaml`:
-- Set your agent's name and role
-- Define capabilities
-- Configure LLM settings
-- Add custom settings
-
-3. Implement your agent logic in `plugin.py`:
-- Customize the evaluation logic
-- Add your own methods
-- Configure LLM prompts
-- Add custom initialization
-
-## Plugin Structure
-```
-my-agent/
-├── __init__.py
-├── agent.yaml     # Agent configuration
-├── plugin.py      # Agent implementation
-└── README.md      # Documentation
-```
-
-## Configuration (agent.yaml)
+Example configuration:
 ```yaml
-name: my_agent
-role: custom_role
-capabilities:
-  - capability_1
-  - capability_2
-llm:
-  system_prompt: |
-    Your custom prompt here
-settings:
-  your_setting: value
+name: price-monitor
+role: market_analyzer
+market_data:
+  update_interval: 300  # 5 minutes
+  confidence_threshold: 0.7
+  risk_threshold: 0.8
 ```
 
-## Implementation (plugin.py)
-Key methods to implement:
-- `initialize()`: Set up your agent
-- `evaluate()`: Main logic
-- `cleanup()`: Resource cleanup
+### Strategy Optimizer
+The strategy optimizer role evaluates market opportunities and makes strategic decisions. It provides:
+- Trading strategy recommendations
+- Risk mitigation steps
+- Confidence-based decisions
+- Performance optimization
 
-Example:
-```python
-async def evaluate(self, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Your custom evaluation logic"""
-    # Get LLM analysis
-    response = await self.llm_provider.query(your_prompt)
-    
-    # Add custom processing
-    result = process_response(response)
-    
-    return result
+Example configuration:
+```yaml
+name: decision-maker
+role: strategy_optimizer
+strategy:
+  min_confidence: 0.8
+  max_exposure: 0.2
+  risk_tolerance: medium
+```
+
+## Configuration
+
+### Required Environment Variables
+```bash
+# LLM Provider (required)
+export LLM_PROVIDER=hyperbolic
+export LLM_API_KEY=your_api_key
+export LLM_MODEL=meta-llama/llama-3.3-70b-instruct
+
+# NEAR Network (optional)
+export NEAR_NETWORK=testnet
+export NEAR_ACCOUNT_ID=your.testnet
+export NEAR_PRIVATE_KEY=your_private_key
+```
+
+### Agent Configuration (agent.yaml)
+The `agent.yaml` file defines your agent's behavior:
+```yaml
+name: your_agent_name
+role: market_analyzer  # or strategy_optimizer
+
+# LLM Settings
+llm_provider: ${LLM_PROVIDER}
+llm_api_key: ${LLM_API_KEY}
+llm_model: ${LLM_MODEL}
+llm_temperature: 0.7
+llm_max_tokens: 1000
+
+# Role-specific settings...
 ```
 
 ## Usage
-```python
-from near_swarm.plugins import get_plugin
-from near_swarm.core.agent import AgentConfig
 
-# Create configuration
-config = AgentConfig(...)
+### Creating an Agent
+```bash
+# Create a market analyzer
+near-swarm create agent price-monitor --role market_analyzer
 
-# Load your plugin
-plugin = await plugin_loader.load_plugin("my_agent", config)
+# Create a strategy optimizer
+near-swarm create agent decision-maker --role strategy_optimizer
+```
 
-# Use your plugin
-result = await plugin.evaluate(context)
+### Running Agents
+```bash
+# Run a single agent
+near-swarm run price-monitor
+
+# Run multiple agents together
+near-swarm run price-monitor decision-maker
+```
+
+### Development
+
+1. Implement your agent logic in `plugin.py`
+2. Configure settings in `agent.yaml`
+3. Test your agent:
+```bash
+# Run with debug logging
+RUST_LOG=debug near-swarm run your-agent
+
+# Run with a specific operation
+near-swarm execute your-agent --operation custom_action
 ```
 
 ## Best Practices
-1. Keep your agent focused on a specific role
-2. Use clear, descriptive prompts
-3. Handle errors gracefully
-4. Clean up resources properly
-5. Document your agent's capabilities
-6. Add type hints and docstrings
-7. Follow NEAR's coding standards
 
-## Testing
-Create tests in `tests/`:
-```python
-async def test_my_agent():
-    plugin = MyAgentPlugin(config)
-    result = await plugin.evaluate(test_context)
-    assert result["decision"] is not None
-```
+1. **Error Handling**
+   - Always handle API errors gracefully
+   - Provide meaningful error messages
+   - Implement retry logic for transient failures
 
-## Contributing
-Share your agent with the community:
-1. Fork the repository
-2. Create your agent
-3. Add documentation
-4. Submit a pull request
+2. **Resource Management**
+   - Clean up resources in the `cleanup()` method
+   - Use async context managers for external connections
+   - Monitor memory usage for long-running agents
 
-## Support
-- Documentation: [docs.near.org](https://docs.near.org)
-- Discord: [NEAR Discord](https://near.chat)
-- GitHub: [NEAR Protocol](https://github.com/near) 
+3. **Configuration**
+   - Use environment variables for sensitive data
+   - Document all configuration options
+   - Provide sensible defaults
+
+4. **Testing**
+   - Write unit tests for your agent logic
+   - Test with different market conditions
+   - Validate error handling and edge cases 

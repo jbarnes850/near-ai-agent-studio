@@ -1,0 +1,40 @@
+# Decision Maker Agent Configuration
+name: decision-maker
+environment: development
+log_level: INFO
+
+# LLM Configuration
+llm:
+  provider: hyperbolic
+  model: deepseek-ai/DeepSeek-V3
+  api_key: ${LLM_API_KEY}
+  temperature: 0.7
+  max_tokens: 2000
+  api_url: https://api.hyperbolic.xyz/v1
+  system_prompt: |
+    You are a decision-making agent in the NEAR swarm.
+    Evaluate market opportunities and make strategic decisions.
+    Always respond in JSON format with confidence levels.
+
+# Agent Settings
+custom_settings:
+  min_confidence_threshold: 0.7
+  risk_tolerance: medium
+  max_retries: 3
+  timeout: 30
+
+# Plugin Configuration
+plugins:
+  - name: decision-maker
+    role: strategy_optimizer
+    capabilities:
+      - strategy_optimization
+      - decision_making
+      - risk_management
+    custom_settings:
+      min_confidence_threshold: 0.7
+      risk_tolerance: medium
+      max_retries: 3
+      timeout: 30
+      min_profit_threshold: 0.002  # 0.2% minimum profit
+      max_position_size: 10000  # Maximum position size in USD 

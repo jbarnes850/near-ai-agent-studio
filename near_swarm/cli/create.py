@@ -15,9 +15,10 @@ def create():
 
 @create.command()
 @click.argument('name')
+@click.option('--role', default=None, help='Agent role (market_analyzer/strategy_optimizer)')
 @click.option('--template', default='plugin_template', help='Template to use')
-@click.option('--path', default='agents/custom', help='Where to create the agent')
-def agent(name: str, template: str, path: str):
+@click.option('--path', default='near_swarm/agents', help='Where to create the agent')
+def agent(name: str, role: Optional[str], template: str, path: str):
     """Create a new agent"""
     try:
         # Get template path
@@ -36,8 +37,15 @@ def agent(name: str, template: str, path: str):
         # Create directories
         os.makedirs(agent_path, exist_ok=True)
         
-        # Copy template
-        shutil.copytree(template_path, agent_path, dirs_exist_ok=True)
+        # Copy template files individually
+        for item in os.listdir(template_path):
+            source = os.path.join(template_path, item)
+            dest = os.path.join(agent_path, item)
+            
+            if os.path.isfile(source):
+                shutil.copy2(source, dest)
+            elif os.path.isdir(source):
+                shutil.copytree(source, dest)
         
         # Update configuration
         config_path = os.path.join(agent_path, 'agent.yaml')
@@ -46,15 +54,54 @@ def agent(name: str, template: str, path: str):
                 config = yaml.safe_load(f)
             
             config['name'] = name
-            config['role'] = f"{name}_agent"
+            
+            # Set role-specific configuration
+            if role:
+                config['role'] = role
+                if role == 'market_analyzer':
+                    config['capabilities'] = [
+                        'market_analysis',
+                        'price_monitoring',
+                        'risk_assessment'
+                    ]
+                    config['system_prompt'] = """You are a market analysis agent monitoring NEAR token prices.
+Your role is to analyze market conditions, identify trends, and assess risks.
+Consider price movements, trading volume, market sentiment, and external factors.
+Always provide clear reasoning and confidence levels for your analysis."""
+                    
+                elif role == 'strategy_optimizer':
+                    config['capabilities'] = [
+                        'strategy_optimization',
+                        'decision_making',
+                        'risk_management'
+                    ]
+                    config['system_prompt'] = """You are a decision-making agent evaluating market opportunities.
+Your role is to analyze market conditions and recommend optimal trading strategies.
+Consider risk factors, potential returns, and market analysis from other agents.
+Always provide clear reasoning and confidence levels for your decisions."""
+            
+            # Update plugin.py
+            plugin_path = os.path.join(agent_path, 'plugin.py')
+            if os.path.exists(plugin_path):
+                with open(plugin_path, 'r') as f:
+                    plugin_code = f.read()
+                
+                # Update class name
+                plugin_code = plugin_code.replace('CustomAgentPlugin', f"{name.replace('-', '_').title()}Plugin")
+                
+                # Update registration
+                plugin_code = plugin_code.replace('register_plugin("custom_agent"', f'register_plugin("{name}"')
+                
+                with open(plugin_path, 'w') as f:
+                    f.write(plugin_code)
             
             with open(config_path, 'w') as f:
                 yaml.dump(config, f)
         
-        click.echo(f"Created agent: {name}")
+        click.echo(f"✅ Created agent: {name}")
         
     except Exception as e:
-        click.echo(f"Error creating agent: {str(e)}", err=True)
+        click.echo(f"❌ Error creating agent: {str(e)}", err=True)
 
 @create.command()
 @click.argument('name')

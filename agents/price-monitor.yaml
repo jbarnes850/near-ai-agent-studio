@@ -1,0 +1,30 @@
+name: price-monitor
+environment: development
+log_level: INFO
+
+llm:
+  provider: hyperbolic
+  api_key: ${LLM_API_KEY}
+  model: ${LLM_MODEL}
+  temperature: 0.7
+  max_tokens: 2000
+  api_url: ${LLM_API_URL}
+
+plugins:
+  - name: price-monitor
+    role: market_analyzer
+    capabilities:
+      - price_monitoring
+      - trend_analysis
+      - market_assessment
+    custom_settings:
+      min_confidence_threshold: 0.7
+      risk_tolerance: medium
+      max_retries: 3
+      timeout: 30
+      update_interval: 60
+      alert_threshold: 0.05
+
+custom_settings:
+  environment: development
+  log_level: INFO 
