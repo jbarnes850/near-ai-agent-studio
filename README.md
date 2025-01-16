@@ -2,6 +2,8 @@
 
 A production-ready starter kit for building AI agents and multi-agent swarms on NEAR. This template provides the essential building blocks for creating autonomous agents that can interact with the NEAR blockchain, make decisions using LLMs, and collaborate in swarms. The NEAR AI Agent Studio is an educational and interactive starter kit designed for developers looking to build AI agents and agentic applications on NEAR.
 
+<div align="center">
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NEAR](https://img.shields.io/badge/NEAR-Protocol-blue.svg)](https://near.org)
 [![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](https://github.com/near/near-ai-agent-template/actions)
@@ -10,8 +12,9 @@ A production-ready starter kit for building AI agents and multi-agent swarms on 
 [![Hyperbolic](https://img.shields.io/badge/LLM-Hyperbolic-purple.svg)](https://hyperbolic.xyz)
 [![Lava Network](https://img.shields.io/badge/RPC-Lava%20Network-orange.svg)](https://www.lavanet.xyz/get-started/near)
 
-
 ![NEAR AI Agent Studio](./public/near-agent-studio.png)
+
+</div>
 
 ## ⚡️ Getting Started
 
@@ -20,6 +23,7 @@ A production-ready starter kit for building AI agents and multi-agent swarms on 
 Before you begin, ensure you have:
 
 #### System Requirements
+
 - Python 3.12 or higher
 - Git
 - Operating System:
@@ -28,6 +32,7 @@ Before you begin, ensure you have:
   - Windows 10/11 with WSL2
 
 #### NEAR Account
+
 - NEAR testnet account (created automatically by [quickstart](./scripts/quickstart.sh) script)
 - Or existing account with:
   - Account ID
@@ -35,11 +40,13 @@ Before you begin, ensure you have:
   - Test NEAR tokens (available from [NEAR Faucet](https://near-faucet.io))
 
 #### API Keys
+
 - Hyperbolic API key for LLM capabilities
   - Sign up at [hyperbolic.xyz](https://hyperbolic.xyz)
   - Free tier available for development
 
 ### Quick Start
+
 ```bash
 # Clone the repository
 git clone https://github.com/jbarnes850/near-ai-agent-studio
@@ -58,13 +65,16 @@ chmod +x scripts/quickstart.sh  # Make script executable
 ```
 
 The quickstart script will:
+
 1. Set up your development environment
 2. Create a NEAR testnet account
 3. Install example agents
 4. Launch an interactive chat assistant to help you create your first agent
 
 ### Interactive Chat
+
 After setup, you'll enter an interactive chat session where you can:
+
 - Create new agents with `/create agent <name>`
 - Configure agents with `/config agent <name>`
 - Run multiple agents together with `/run-agents`
@@ -72,12 +82,14 @@ After setup, you'll enter an interactive chat session where you can:
 - Get help anytime with `/help`
 
 Start the chat manually anytime:
+
 ```bash
 near-swarm chat  # Regular mode
 near-swarm chat --tutorial create-first-agent  # Guided tutorial
 ```
 
 ### Environment Setup
+
 ```bash
 # Copy environment template
 cp .env.example .env
@@ -164,12 +176,6 @@ graph TB
     SwarmAgent --> Evaluation
 ```
 
-
-The architecture combines a flexible agent framework with swarm intelligence capabilities:
-
-1. **Agent Framework Core**
-   - Agent Registry for managing available agents
-
 The architecture combines a flexible agent system with swarm intelligence capabilities:
 
 1. **Agent Framework Core**
@@ -192,14 +198,8 @@ The architecture combines a flexible agent system with swarm intelligence capabi
    - Consensus building through multi-agent voting
    - Role-based evaluation with LLM reasoning
 
-This architecture enables:
-- Easy extension through agent plugins
-- Coordinated decision-making via swarm intelligence
-- Secure transaction handling
-- Market-aware operations
-- LLM-powered reasoning
-
 ### Project Structure
+
 ```bash
 near-swarm-intelligence/
 ├── near_swarm/              
@@ -220,21 +220,6 @@ near-swarm-intelligence/
 ```
 
 ## 🛠️ Development Guide
-
-### Running Demos
-```bash
-# Run all demos
-python near_swarm/examples/demo.py all
-
-# Run specific components
-python near_swarm/examples/demo.py voice    # Voice assistant
-python near_swarm/examples/demo.py strategy # Multi-agent strategy
-python near_swarm/examples/demo.py chat    # Interactive chat
-
-# Create your first agent
-near-swarm create agent my-agent
-near-swarm plugins list  # View available plugins
-```
 
 ### Creating Your First Agent
 
