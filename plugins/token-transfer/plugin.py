@@ -55,12 +55,10 @@ Testing:
 
 import asyncio
 import logging
-import os
 from typing import Dict, Any, Optional
 from near_swarm.plugins.base import AgentPlugin
 from near_swarm.core.exceptions import AgentError, NEARError, LLMError
 from near_swarm.core.market_data import MarketDataManager
-from near_swarm.core.near_integration import NEARConnection
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -69,26 +67,26 @@ class TokenTransferPlugin(AgentPlugin):
     """Plugin for secure NEAR token transfers with LLM validation."""
     
     async def initialize(self) -> None:
-        """Initialize plugin."""
+        """Initialize plugin resources."""
         try:
-            # Initialize NEAR connection
-            self.near = await NEARConnection.create(
-                account_id=os.getenv('NEAR_ACCOUNT_ID'),
-                private_key=os.getenv('NEAR_PRIVATE_KEY'),
-                network="testnet"
-            )
-            logger.info("TokenTransferPlugin initialized successfully")
-        except Exception as e:
-            logger.error(f"Initialization failed: {str(e)}")
-            raise
+            # Initialize LLM provider
+            if not hasattr(self, 'llm_provider'):
+                self.llm_provider = await self._create_llm_provider()
             
-    async def cleanup(self) -> None:
-        """Cleanup plugin resources."""
-        if hasattr(self, 'near'):
-            try:
-                await self.near.close()
-            except Exception as e:
-                logger.warning(f"Error closing NEAR connection: {str(e)}")
+            # Initialize NEAR connection
+            if not hasattr(self, 'near'):
+                self.near = await self._create_near_connection()
+            
+            # Initialize market data manager
+            if not hasattr(self, 'market_data'):
+                self.market_data = MarketDataManager()
+                await self.market_data._ensure_session()
+            
+            logger.info("TokenTransferPlugin initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Initialization failed: {e}")
+            raise AgentError(f"Failed to initialize plugin: {e}")
     
     async def _create_llm_provider(self):
         """Create LLM provider from configuration."""
@@ -106,6 +104,22 @@ class TokenTransferPlugin(AgentPlugin):
         )
         
         return create_llm_provider(config)
+    
+    async def _create_near_connection(self):
+        """Create NEAR connection from configuration."""
+        from near_swarm.core.near_integration import create_near_connection, NEARConfig
+        from dotenv import load_dotenv
+        import os
+        
+        load_dotenv()
+        
+        config = NEARConfig(
+            network=os.getenv('NEAR_NETWORK', 'testnet'),
+            account_id=os.getenv('NEAR_ACCOUNT_ID'),
+            private_key=os.getenv('NEAR_PRIVATE_KEY')
+        )
+        
+        return await create_near_connection(config)
     
     async def execute(self, operation: Optional[str] = None, **kwargs) -> Any:
         """Execute plugin operations."""
@@ -229,6 +243,18 @@ class TokenTransferPlugin(AgentPlugin):
             logger.error(f"LLM validation failed: {e}")
             raise
     
+    async def cleanup(self) -> None:
+        """Clean up plugin resources."""
+        try:
+            if hasattr(self, 'near'):
+                await self.near.close()
+            if hasattr(self, 'market_data'):
+                await self.market_data.close()
+            logger.info("TokenTransferPlugin cleaned up successfully")
+        except Exception as e:
+            logger.error(f"Cleanup failed: {e}")
+            raise AgentError(f"Failed to cleanup plugin: {e}")
+
 async def main():
     """Run the token transfer example."""
     from near_swarm.plugins import PluginLoader

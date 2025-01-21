@@ -166,21 +166,21 @@ section_header "🚀 Setting Up Agent Plugins"
 
 # Install example plugins
 show_progress "Installing token transfer plugin"
-near-swarm plugins install near_swarm/examples/token_transfer_strategy.py --name token-transfer
+python -m near_swarm.cli.main plugins install near_swarm/examples/token_transfer_strategy.py --name token-transfer
 
 show_progress "Installing arbitrage plugin"
-near-swarm plugins install near_swarm/examples/arbitrage_strategy.py --name arbitrage-agent
+python -m near_swarm.cli.main plugins install near_swarm/examples/arbitrage_strategy.py --name arbitrage-agent
 
 # List installed plugins
 echo -e "\n${CYAN}Installed Plugins:${NC}"
-near-swarm plugins list
+python -m near_swarm.cli.main plugins list
 
 # Initialize demo
 section_header "📈 Running Demo"
 
 # Run the token transfer demo
 show_progress "Running token transfer demo"
-near-swarm execute token-transfer --operation balance
+python -m near_swarm.cli.main execute token-transfer --operation balance
 
 # After setup, show status
 section_header "📊 System Status"
@@ -212,13 +212,13 @@ section_header "💬 Starting Interactive Chat"
 echo -e "Tip: Type ${CYAN}/help${NC} to see available commands"
 echo -e "     Type ${CYAN}/exit${NC} to quit at any time\n"
 
-near-swarm chat --tutorial create-first-agent
+python -m near_swarm.cli.main chat --tutorial create-first-agent
 
 echo -e "\n${CYAN}Next steps:${NC}"
-echo "1. Explore more agent templates: near-swarm plugins list"
-echo "2. Create custom agents: near-swarm create agent my-agent"
+echo "1. Explore more agent templates: python -m near_swarm.cli.main plugins list"
+echo "2. Create custom agents: python -m near_swarm.cli.main create agent my-agent"
 echo "3. Run advanced demos:"
-echo "   • Multi-agent trading: near-swarm demo trading"
-echo "   • Portfolio management: near-swarm demo portfolio"
+echo "   • Multi-agent trading: python -m near_swarm.cli.main demo trading"
+echo "   • Portfolio management: python -m near_swarm.cli.main demo portfolio"
 echo ""
 echo -e "${BLUE}Documentation: https://github.com/jbarnes850/near-ai-agent-studio${NC}"

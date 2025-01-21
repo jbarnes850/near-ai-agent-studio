@@ -53,7 +53,7 @@ class NEARConnection:
         self.network = network.lower()
         self.account_id = account_id
         self.private_key = private_key
-        self.node_url = node_url or "https://test.rpc.fastnear.com"
+        self.node_url = node_url or "https://rpc.testnet.near.org"
         self.use_backup = use_backup
 
         try:
@@ -70,6 +70,14 @@ class NEARConnection:
         except Exception as e:
             logger.error(f"Failed to initialize NEAR connection: {str(e)}")
             raise NEARConnectionError(f"Failed to initialize connection: {str(e)}")
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.close()
 
     async def check_account(self, account_id: str) -> bool:
         """Check if account exists."""
