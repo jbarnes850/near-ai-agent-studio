@@ -287,5 +287,23 @@ def list_agents():
         logger.error(f"Error listing agents: {str(e)}")
         sys.exit(1)
 
+@cli.command()
+@click.argument('agent_name')
+def dev(agent_name: str):
+    """Start the development environment for an agent."""
+    try:
+        agent_path = os.path.join('/near_swarm/agents', agent_name)
+        if not os.path.exists(agent_path):
+            click.echo(f"Agent {agent_name} not found at {agent_path}")
+            return
+        
+        click.echo(f"Starting development environment for agent: {agent_name}")
+        os.chdir(agent_path)
+        os.system('near-swarm run')
+        
+    except Exception as e:
+        logger.error(f"Error starting development environment: {str(e)}")
+        sys.exit(1)
+
 if __name__ == '__main__':
-    cli() 
+    cli()

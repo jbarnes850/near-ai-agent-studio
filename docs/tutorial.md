@@ -33,7 +33,7 @@ pip install -e .
 near-swarm create agent my-token-bot
 
 # Start the development environment
-cd my-token-bot
+cd /near_swarm/agents/my-token-bot
 near-swarm dev
 ```
 
@@ -67,7 +67,7 @@ Let's create your first NEAR agent plugin! We'll build a simple token transfer a
 
 ```bash
 near-swarm create agent token-bot
-cd token-bot
+cd /near_swarm/agents/token-bot
 ```
 
 This creates:
@@ -212,7 +212,7 @@ near-swarm config validate
 
 3. Start the agent:
 ```bash
-near-swarm start token-bot
+near-swarm dev
 ```
 
 You should see output like:
