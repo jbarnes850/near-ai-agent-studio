@@ -191,4 +191,4 @@ def project(name: str, template: str):
         click.echo("5. near-swarm init")
         
     except Exception as e:
-        click.echo(f"Error creating project: {str(e)}", err=True) 
+        click.echo(f"Error creating project: {str(e)}", err=True)
