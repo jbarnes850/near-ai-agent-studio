@@ -19,23 +19,201 @@ By the end of this tutorial, you'll have:
 - Basic understanding of async Python
 - NEAR testnet account (we'll help you create one)
 
-## 🚀 Quick Start (5 minutes)
+## ⚙️ Environment Setup
 
+Before starting, you'll need to set up your environment:
+
+**Environment Variables**:
+```bash
+# Copy environment template and edit with your values
+cp .env.example .env
+
+# Required Variables:
+NEAR_NETWORK=testnet
+NEAR_ACCOUNT_ID=your-account.testnet
+NEAR_PRIVATE_KEY=your-private-key
+NEAR_RPC_URL=https://rpc.testnet.near.org  # Optional, defaults to public endpoint
+
+# LLM Configuration
+LLM_PROVIDER=hyperbolic  # Required: hyperbolic, openai, anthropic, or deepseek
+LLM_API_KEY=your-api-key  # Required: Get from your LLM provider
+LLM_MODEL=meta-llama/Llama-3.3-70B-Instruct  # Optional, provider-specific
+LLM_TEMPERATURE=0.7  # Optional, defaults to 0.7
+LLM_MAX_TOKENS=2000  # Optional, defaults to 2000
+```
+
+**Dependencies**:
+```bash
+# Required system packages
+python3.12 --version  # Verify Python version
+pip --version        # Verify pip installation
+
+# Optional but recommended
+git --version        # For version control
+```
+
+## 🚀 Quick Start
+
+You have two options to get started:
+
+### Option 1: Automated Setup (Recommended)
+```bash
+# Clone the repository
+git clone https://github.com/jbarnes850/near-ai-agent-studio
+cd near-ai-agent-studio
+
+# Make quickstart script executable
+chmod +x scripts/quickstart.sh
+
+# Copy environment template
+cp .env.example .env
+
+# Run the quickstart script
+./scripts/quickstart.sh
+```
+
+The quickstart script will:
+1. Set up your development environment
+2. Create a NEAR testnet account
+3. Install example agents
+4. Verify all integrations (NEAR, Market Data, LLM)
+5. Launch an interactive assistant
+
+### Option 2: Manual Setup
 ```bash
 # Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
+# Copy environment template
+cp .env.example .env
+
 # Install the framework
 pip install -e .
+
+# Initialize and validate configuration
+near-swarm config init
+near-swarm config validate
 
 # Create a new agent plugin
 near-swarm create agent my-token-bot
 
-# Start the development environment
-cd /near_swarm/agents/my-token-bot
-near-swarm dev
+# Start the interactive assistant
+near-swarm chat
 ```
+
+## 📚 Available Commands
+
+### Creating Components
+```bash
+# Create new agent
+near-swarm create agent my-token-bot
+
+# Create new project
+near-swarm create project my-project
+
+# Create new strategy
+near-swarm create strategy my-strategy
+```
+
+### Managing Plugins
+```bash
+# List available plugins
+near-swarm plugins list
+
+# Install a plugin
+near-swarm plugins install ./my-plugin
+
+# Update a plugin
+near-swarm plugins update my-plugin
+```
+
+### Running Agents
+```bash
+# Run single agent
+near-swarm run my-token-bot
+
+# Run multiple agents together
+near-swarm run price-monitor decision-maker
+
+# Execute specific operation
+near-swarm execute my-token-bot --operation check_balance
+```
+
+### Configuration Management
+```bash
+# Initialize configuration
+near-swarm config init
+
+# Validate configuration
+near-swarm config validate
+
+# Show current configuration
+near-swarm config show
+```
+
+## 🔧 Plugin Installation Guide
+
+Plugins can be installed in several ways:
+
+1. **Local Development**:
+```bash
+# Install from local directory
+near-swarm plugins install ./my-plugin
+
+# Install from specific path
+near-swarm plugins install /path/to/plugin
+```
+
+2. **Git Repository**:
+```bash
+# Install from git repository
+near-swarm plugins install git+https://github.com/username/plugin.git
+
+# Install specific branch/tag
+near-swarm plugins install git+https://github.com/username/plugin.git@branch
+```
+
+3. **Plugin Registry**:
+```bash
+# Install from official registry
+near-swarm plugins install plugin-name
+
+# Install specific version
+near-swarm plugins install plugin-name==1.0.0
+```
+
+## ❗ Troubleshooting
+
+Common issues and solutions:
+
+### Environment Setup
+- **Issue**: `Python version not supported`
+  - Solution: Install Python 3.12+ using pyenv or your system package manager
+  - Verify with: `python --version`
+
+- **Issue**: `Virtual environment activation fails`
+  - Windows Solution: Use `venv\Scripts\activate`
+  - Unix Solution: Use `source venv/bin/activate`
+  - Check activation with: `which python`
+
+### Plugin System
+- **Issue**: `Plugin not found`
+  - Verify plugin path is correct
+  - Check plugin structure matches template
+  - Run: `near-swarm plugins list` to see installed plugins
+
+### NEAR Integration
+- **Issue**: `Invalid NEAR account`
+  - Verify account exists on testnet
+  - Check account has sufficient balance
+  - Validate private key format
+
+### LLM Integration
+- **Issue**: `LLM API key invalid`
+  - Verify API key in .env file
+  - Check LLM_PROVIDER matches API key
+  - Test connection: `near-swarm config validate`
 
 ## 🎓 Learning Paths
 
@@ -67,7 +245,7 @@ Let's create your first NEAR agent plugin! We'll build a simple token transfer a
 
 ```bash
 near-swarm create agent token-bot
-cd /near_swarm/agents/token-bot
+cd token-bot
 ```
 
 This creates:
@@ -89,12 +267,7 @@ description: "A simple token transfer agent for NEAR blockchain"
 version: "0.1.0"
 author: "Your Name"
 
-# Agent capabilities
-capabilities:
-  - token_transfer
-  - balance_check
-
-# LLM configuration
+# LLM Configuration
 llm:
   provider: ${LLM_PROVIDER}
   model: ${LLM_MODEL}
@@ -108,15 +281,29 @@ llm:
     3. Execute transfers safely
     4. Maintain accurate records
 
-    Always prioritize security and accuracy in your operations.
-
-# NEAR configuration
+# NEAR Configuration
 near:
   network: ${NEAR_NETWORK:-testnet}
   account_id: ${NEAR_ACCOUNT_ID}
   private_key: ${NEAR_PRIVATE_KEY}
   rpc_url: ${NEAR_RPC_URL:-""}
   use_backup_rpc: true
+
+# Agent capabilities
+capabilities:
+  - token_transfer
+  - balance_check
+  - transaction_validation
+  - error_handling
+
+# Custom settings
+settings:
+  min_confidence_threshold: 0.7
+  risk_tolerance: medium
+  max_retries: 3
+  timeout: 30
+  min_profit_threshold: 0.002  # 0.2% minimum profit
+  max_position_size: 10000  # Maximum position size in USD
 ```
 
 ### Step 3: Implement Your Agent
@@ -550,22 +737,22 @@ Try these examples in your development environment:
 
 1. Simple Trading Strategy
 ```bash
-near-swarm run examples/simple_strategy.py
+near-swarm run simple-strategy
 ```
 
 2. Arbitrage Strategy
 ```bash
-near-swarm run examples/arbitrage_strategy.py
+near-swarm run arbitrage-strategy
 ```
 
 3. Swarm Trading
 ```bash
-near-swarm run examples/swarm_trading.py
+near-swarm run swarm-trading
 ```
 
 4. Token Transfer Strategy
 ```bash
-near-swarm run examples/token_transfer_strategy.py
+near-swarm run token-transfer
 ```
 
 ## 📚 Next Steps
@@ -576,9 +763,3 @@ near-swarm run examples/token_transfer_strategy.py
 4. Contribute to the framework
 5. Deploy your first agent to mainnet
 
-## 🤝 Need Help?
-
-- Check our [Troubleshooting Guide](troubleshooting.md)
-- Join our Discord community
-- Open an issue on GitHub
-- Read our [API Reference](api-reference.md) 
