@@ -81,36 +81,55 @@ def run(agents, timeout):
             market_data = MarketDataManager()
             loaded_agents = []
             
+            # Updated search paths to include root directory
+            def get_config_paths(agent):
+                return [
+                    f"near_swarm/agents/{agent}/agent.yaml",
+                    f"agents/{agent}/agent.yaml",
+                    f"near_swarm/examples/{agent}.yaml",
+                    f"plugins/{agent}/agent.yaml",
+                    f"{agent}/agent.yaml",  # Add root directory search
+                    f"agent.yaml"  # For single agent in root
+                ]
+            
             # Load and validate each agent
             for agent in agents:
-                config_file = f"near_swarm/agents/{agent}/agent.yaml"
-                if not os.path.exists(config_file):
-                    # Try alternate locations
-                    alternate_paths = [
-                        f"agents/{agent}/agent.yaml",
-                        f"near_swarm/examples/{agent}.yaml",
-                        f"plugins/{agent}/agent.yaml"
-                    ]
-                    found = False
-                    for path in alternate_paths:
-                        if os.path.exists(path):
-                            config_file = path
-                            found = True
-                            break
+                config_paths = get_config_paths(agent)
+                config_file = None
+                
+                # Find first existing config file
+                for path in config_paths:
+                    if os.path.exists(path):
+                        config_file = path
+                        break
+                
+                if not config_file:
+                    click.echo(f"❌ Agent not found: {agent}")
+                    click.echo("Looked in:")
+                    for path in config_paths:
+                        click.echo(f"- {path}")
+                    return
                     
-                    if not found:
-                        click.echo(f"❌ Agent not found: {agent}")
-                        click.echo("Looked in:")
-                        click.echo(f"- near_swarm/agents/{agent}/agent.yaml")
-                        for path in alternate_paths:
-                            click.echo(f"- {path}")
-                        return
-                    
-                # Load config to verify it exists
+                # Load and validate config
                 with open(config_file, 'r') as f:
                     config = yaml.safe_load(f)
+                    
+                    # Validate required fields
                     if not config:
                         click.echo(f"❌ Invalid configuration for agent: {agent}")
+                        return
+                        
+                    # Validate role field
+                    if 'role' not in config:
+                        click.echo(f"❌ Missing required 'role' field in configuration for agent: {agent}")
+                        click.echo("Please specify a role (e.g., market_analyzer, strategy_optimizer)")
+                        return
+                    
+                    # Validate role value
+                    valid_roles = ['market_analyzer', 'strategy_optimizer', 'token_transfer']
+                    if config['role'] not in valid_roles:
+                        click.echo(f"❌ Invalid role '{config['role']}' for agent: {agent}")
+                        click.echo(f"Valid roles: {', '.join(valid_roles)}")
                         return
                 
                 # Load agent plugin
@@ -120,7 +139,7 @@ def run(agents, timeout):
                     return
                     
                 loaded_agents.append(plugin)
-                click.echo(f"✅ Loaded agent: {agent} ({config.get('role', 'unknown role')})")
+                click.echo(f"✅ Loaded agent: {agent} (role: {config['role']})")
             
             click.echo("\n🤖 Agents are now running and collaborating:")
             
@@ -219,11 +238,75 @@ def run(agents, timeout):
     except Exception as e:
         click.echo(f"❌ Error running agents: {str(e)}")
 
+@cli.command()
+def validate():
+    """Validate agent configurations"""
+    try:
+        # Use same config path resolution as run command
+        def find_agent_configs():
+            configs = []
+            search_dirs = [
+                "near_swarm/agents",
+                "agents",
+                "near_swarm/examples",
+                "plugins",
+                "."  # Add root directory
+            ]
+            
+            for directory in search_dirs:
+                if os.path.exists(directory):
+                    # Check for agent.yaml in directory
+                    if os.path.exists(os.path.join(directory, "agent.yaml")):
+                        configs.append(os.path.join(directory, "agent.yaml"))
+                    
+                    # Check subdirectories
+                    for subdir in os.listdir(directory):
+                        config_path = os.path.join(directory, subdir, "agent.yaml")
+                        if os.path.exists(config_path):
+                            configs.append(config_path)
+            
+            return configs
+        
+        configs = find_agent_configs()
+        if not configs:
+            click.echo("❌ No agent configurations found")
+            return
+        
+        click.echo("🔍 Validating agent configurations...")
+        for config_path in configs:
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+                
+                # Validate configuration
+                if not config:
+                    click.echo(f"❌ Invalid configuration in {config_path}")
+                    continue
+                
+                # Check required fields
+                required_fields = ['name', 'role']
+                missing_fields = [field for field in required_fields if field not in config]
+                if missing_fields:
+                    click.echo(f"❌ Missing required fields in {config_path}: {', '.join(missing_fields)}")
+                    continue
+                
+                # Validate role
+                valid_roles = ['market_analyzer', 'strategy_optimizer', 'token_transfer']
+                if config['role'] not in valid_roles:
+                    click.echo(f"❌ Invalid role '{config['role']}' in {config_path}")
+                    click.echo(f"Valid roles: {', '.join(valid_roles)}")
+                    continue
+                
+                click.echo(f"✅ Valid configuration: {config_path} (role: {config['role']})")
+        
+    except Exception as e:
+        click.echo(f"❌ Error validating configurations: {str(e)}")
+
 # Register commands
 cli.add_command(plugins)
 cli.add_command(create)
 cli.add_command(config)
 cli.add_command(run)
+cli.add_command(validate)
 
 if __name__ == '__main__':
     cli() 
