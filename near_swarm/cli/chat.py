@@ -18,6 +18,13 @@ from near_swarm.plugins import PluginLoader
 from near_swarm.core.llm_provider import create_llm_provider, LLMConfig
 from near_swarm.core.market_data import MarketDataManager
 
+import os
+import click
+from dotenv import load_dotenv
+
+# Load .env file explicitly
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 @dataclass
