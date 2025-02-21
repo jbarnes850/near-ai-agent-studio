@@ -330,7 +330,7 @@ Your development environment is ready for AI agents!
                     if price_monitor:
                         analysis = await price_monitor.evaluate({
                             'current_price': price_data['price'],
-                            'change_24h': price_data['24h_change']
+                            'change_24h': price_data['price_change_24h']
                         })
                         
                         if analysis:

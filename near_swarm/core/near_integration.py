@@ -128,7 +128,7 @@ class NEARConnection:
             logger.error(f"Error processing private key: {str(e)}")
             raise NEARConnectionError(f"Key processing failed: {str(e)}")
 
-        self.node_url = node_url or "https://rpc.testnet.near.org"
+        self.node_url = node_url or "https://rpc.testnet.fastnear.com"
         self.use_backup = use_backup
 
         try:
