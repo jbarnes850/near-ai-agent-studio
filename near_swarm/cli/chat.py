@@ -320,6 +320,12 @@ Your development environment is ready for AI agents!
             async with MarketDataManager() as market:
                 price_data = await market.get_token_price('near')
                 click.echo(f"\n📊 Current NEAR Price: ${price_data['price']:.2f}")
+                
+                click.echo("\n📝 Transaction Behavior:")
+                click.echo("• Monitoring market conditions and agent confidence")
+                click.echo("• Transactions require >75% confidence to execute")
+                click.echo("• Initial analysis typically suggests holding positions")
+                click.echo("• You'll be notified when transactions are considered/executed\n")
 
                 while True:
                     # Price Monitor Analysis

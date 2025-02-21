@@ -313,6 +313,12 @@ echo -e "2. Add a decision-making agent"
 echo -e "3. Watch them collaborate in real-time"
 echo -e "4. Learn about advanced agent capabilities"
 echo ""
+echo -e "${YELLOW}Note about Transactions:${NC}"
+echo -e "• Transactions only execute when Decision Maker confidence exceeds 75%"
+echo -e "• During initial runs, agents typically recommend 'Hold' positions"
+echo -e "• This is normal as agents analyze market conditions conservatively"
+echo -e "• You'll see clear logs when transactions are considered/executed"
+echo ""
 echo -e "${CYAN}Press Enter to start the interactive experience...${NC}"
 read -r
 
