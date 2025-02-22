@@ -1,6 +1,10 @@
 """
-NEAR Swarm CLI
-Main entry point for the command line interface
+NEAR Agent Studio CLI
 """
 
-from .main import cli as app 
+from .main import cli
+
+# Create Typer app instance
+app = cli
+
+__all__ = ['cli', 'app'] 

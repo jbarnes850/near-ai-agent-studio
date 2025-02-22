@@ -320,6 +320,12 @@ Your development environment is ready for AI agents!
             async with MarketDataManager() as market:
                 price_data = await market.get_token_price('near')
                 click.echo(f"\n📊 Current NEAR Price: ${price_data['price']:.2f}")
+                
+                click.echo("\n📝 Transaction Behavior:")
+                click.echo("• Monitoring market conditions and agent confidence")
+                click.echo("• Transactions require >75% confidence to execute")
+                click.echo("• Initial analysis typically suggests holding positions")
+                click.echo("• You'll be notified when transactions are considered/executed\n")
 
                 while True:
                     # Price Monitor Analysis
@@ -330,7 +336,7 @@ Your development environment is ready for AI agents!
                     if price_monitor:
                         analysis = await price_monitor.evaluate({
                             'current_price': price_data['price'],
-                            'change_24h': price_data['24h_change']
+                            'change_24h': price_data['price_change_24h']
                         })
                         
                         if analysis:
@@ -362,19 +368,42 @@ Your development environment is ready for AI agents!
                             if decision.get('confidence', 0) >= 0.75:
                                 click.echo("\n✨ High Confidence Decision:")
                                 click.echo(decision.get('action', ''))
+                                click.echo("\n🔄 Preparing to execute transaction...")
                                 
                                 # Execute the decision
                                 try:
                                     result = await decision_maker.execute(decision)
                                     if result.get('transaction'):
                                         tx_info = result['transaction']
-                                        if tx_info['status'] == 'success':
-                                            click.echo(click.style(f"\n🎯 Transaction executed: {tx_info['explorer_url']}", fg='green'))
+                                        if tx_info.get('status') == 'success':
+                                            click.echo(click.style(
+                                                f"\n✅ Transaction Successfully Executed!", 
+                                                fg='green', bold=True
+                                            ))
+                                            click.echo(f"• Transaction Hash: {tx_info['transaction_id']}")
+                                            click.echo(f"• Explorer URL: {tx_info['explorer_url']}")
                                         else:
-                                            click.echo(click.style(f"\n❌ Transaction failed: {tx_info.get('error', 'Unknown error')}", fg='red'))
+                                            click.echo(click.style(
+                                                f"\n❌ Transaction Failed", 
+                                                fg='red', bold=True
+                                            ))
+                                            click.echo(f"• Reason: {tx_info.get('error', 'Unknown error')}")
+                                            click.echo("• The system will automatically retry if appropriate")
+                                    else:
+                                        click.echo(click.style(
+                                            "\n⚠️  No transaction was generated",
+                                            fg='yellow', bold=True
+                                        ))
                                 except Exception as e:
                                     logger.error(f"Error executing decision: {str(e)}")
-                                    logger.exception("Full traceback:")
+                                    click.echo(click.style(
+                                        f"\n❌ Error during transaction execution: {str(e)}",
+                                        fg='red'
+                                    ))
+                            else:
+                                click.echo("\n📊 Current confidence level is below threshold (75%)")
+                                click.echo("• This is normal during initial analysis")
+                                click.echo("• The agent is being conservative to ensure safe operation")
 
                     click.echo("\n⏳ Waiting 60 seconds before next analysis...")
                     await asyncio.sleep(60)

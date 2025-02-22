@@ -33,6 +33,45 @@ async def test_near_connection(connection):
         print(f"❌ NEAR connection failed: {str(e)}")
         raise
 
+async def test_llm_connection():
+    """Test LLM integration."""
+    print("\n⏳ Testing LLM integration...")
+    llm = None
+    try:
+        # Load LLM configuration
+        api_key = os.getenv('LLM_API_KEY')
+        provider = os.getenv('LLM_PROVIDER', 'hyperbolic')
+        model = os.getenv('LLM_MODEL', 'meta-llama/Llama-3.3-70B-Instruct')
+        api_url = os.getenv('LLM_API_URL', 'https://api.hyperbolic.xyz/v1')
+
+        if not api_key:
+            print('❌ LLM API key not found')
+            return False
+        
+        config = LLMConfig(
+            provider=provider,
+            api_key=api_key,
+            model=model,
+            api_url=api_url
+        )
+        
+        llm = create_llm_provider(config)
+        response = await llm.query('Hello! Please respond with OK to verify the connection.')
+        
+        if 'OK' in response.upper():
+            print(f"✓ {provider.title()} LLM connection verified")
+            return True
+        else:
+            print(f"❌ Unexpected response from LLM")
+            return False
+            
+    except Exception as e:
+        print(f"❌ LLM verification failed: {str(e)}")
+        return False
+    finally:
+        if llm is not None:
+            await llm.close()
+
 async def verify_environment():
     """Verify all components needed for workshop."""
     try:
@@ -63,6 +102,11 @@ async def verify_environment():
             private_key=private_key
         ) as near:
             await test_near_connection(near)
+            
+        # 3. Test LLM Connection
+        llm_success = await test_llm_connection()
+        if not llm_success:
+            print("\n⚠️  LLM verification failed but continuing with other checks")
         
         print("\n✅ All systems verified!")
         
