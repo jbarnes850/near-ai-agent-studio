@@ -105,7 +105,6 @@ cp .env.example .env
 ## Core Components
 
 > **Tip**: Start with modifying the examples in `near_swarm/examples/` to understand the framework.
-
 > **Note**: This template runs on NEAR testnet by default for safe development.
 > Always test thoroughly before deploying to mainnet.
 
