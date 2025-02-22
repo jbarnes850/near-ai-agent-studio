@@ -282,7 +282,6 @@ See our [Examples Guide](docs/tutorial.md) for detailed walkthroughs.
 ## 📖 Documentation
 
 - [Core Concepts](docs/core-concepts.md)
-- [First Strategy](docs/first-strategy.md)
 - [Tutorial](docs/tutorial.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
