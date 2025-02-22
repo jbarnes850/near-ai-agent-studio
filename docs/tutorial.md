@@ -5,6 +5,7 @@ Welcome to the NEAR Swarm Intelligence Framework! This tutorial will guide you t
 ## 🎯 What You'll Build
 
 By the end of this tutorial, you'll have:
+
 - Created a custom agent plugin
 - Configured your agent using YAML
 - Integrated with the NEAR blockchain
@@ -19,217 +20,125 @@ By the end of this tutorial, you'll have:
 - Basic understanding of async Python
 - NEAR testnet account (we'll help you create one)
 
-## ⚙️ Environment Setup
+## ⚙️ Setup and Configuration
 
-Before starting, you'll need to set up your environment:
+### Quick Start (Recommended)
 
-**Environment Variables**:
 ```bash
-# Copy environment template and edit with your values
-cp .env.example .env
-
-# Required Variables:
-NEAR_NETWORK=testnet
-NEAR_ACCOUNT_ID=your-account.testnet
-NEAR_PRIVATE_KEY=your-private-key
-NEAR_RPC_URL=https://rpc.testnet.near.org  # Optional, defaults to public endpoint
-
-# LLM Configuration
-LLM_PROVIDER=hyperbolic  # Required: hyperbolic, openai, anthropic, or deepseek
-LLM_API_KEY=your-api-key  # Required: Get from your LLM provider
-LLM_MODEL=meta-llama/Llama-3.3-70B-Instruct  # Optional, provider-specific
-LLM_TEMPERATURE=0.7  # Optional, defaults to 0.7
-LLM_MAX_TOKENS=2000  # Optional, defaults to 2000
-```
-
-**Dependencies**:
-```bash
-# Required system packages
-python3.12 --version  # Verify Python version
-pip --version        # Verify pip installation
-
-# Optional but recommended
-git --version        # For version control
-```
-
-## 🚀 Quick Start
-
-You have two options to get started:
-
-### Option 1: Automated Setup (Recommended)
-```bash
-# Clone the repository
+# Clone and setup
 git clone https://github.com/jbarnes850/near-ai-agent-studio
 cd near-ai-agent-studio
-
-# Make quickstart script executable
 chmod +x scripts/quickstart.sh
-
-# Copy environment template
-cp .env.example .env
-
-# Run the quickstart script
 ./scripts/quickstart.sh
 ```
 
-The quickstart script will:
+The quickstart script will automatically:
+
 1. Set up your development environment
 2. Create a NEAR testnet account
 3. Install example agents
-4. Verify all integrations (NEAR, Market Data, LLM)
+4. Verify all integrations
 5. Launch an interactive assistant
 
-### Option 2: Manual Setup
+### Manual Configuration
+
+If you prefer manual setup, create a `.env` file:
+
 ```bash
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Required: NEAR Configuration
+NEAR_NETWORK=testnet
+NEAR_ACCOUNT_ID=your-account.testnet
+NEAR_PRIVATE_KEY=your-private-key
+NEAR_RPC_URL=https://rpc.testnet.fastnear.com/  # Optional
 
-# Copy environment template
-cp .env.example .env
-
-# Install the framework
-pip install -e .
-
-# Initialize and validate configuration
-near-swarm config init
-near-swarm config validate
-
-# Create a new agent plugin
-near-swarm create agent my-token-bot
-
-# Start the interactive assistant
-near-swarm chat
+# Required: LLM Configuration
+LLM_PROVIDER=hyperbolic  # hyperbolic, openai, anthropic, or deepseek
+LLM_API_KEY=your-api-key
+LLM_MODEL=meta-llama/Llama-3.3-70B-Instruct  # Optional
+LLM_TEMPERATURE=0.7  # Optional
+LLM_MAX_TOKENS=2000  # Optional
 ```
 
-## 📚 Available Commands
+### Plugin Configuration (agent.yaml)
 
-### Creating Components
-```bash
-# Create new agent
-near-swarm create agent my-token-bot
+```yaml
+name: my-agent
+description: "Agent description"
+version: "0.1.0"
+author: "Your Name"
 
-# Create new project
-near-swarm create project my-project
+# LLM Configuration
+llm:
+  provider: ${LLM_PROVIDER}
+  model: ${LLM_MODEL}
+  temperature: 0.7
+  max_tokens: 2000
+  system_prompt: |
+    You are an AI agent specialized in NEAR operations.
 
-# Create new strategy
-near-swarm create strategy my-strategy
+# NEAR Configuration
+near:
+  network: ${NEAR_NETWORK:-testnet}
+  account_id: ${NEAR_ACCOUNT_ID}
+  private_key: ${NEAR_PRIVATE_KEY}
+  rpc_url: ${NEAR_RPC_URL:-""}
+  use_backup_rpc: true
+
+# Agent capabilities
+capabilities:
+  - token_transfer
+  - balance_check
+  - transaction_validation
+
+# Custom settings
+settings:
+  min_confidence_threshold: 0.7
+  risk_tolerance: medium
+  max_retries: 3
 ```
 
-### Managing Plugins
+## 📚 Command Reference
+
 ```bash
-# List available plugins
-near-swarm plugins list
+# Create Components
+near-swarm create agent my-agent     # Create new agent
+near-swarm create project my-project # Create new project
+near-swarm create strategy my-strategy # Create new strategy
 
-# Install a plugin
-near-swarm plugins install ./my-plugin
+# Manage Plugins
+near-swarm plugins list              # List available plugins
+near-swarm plugins install ./my-plugin # Install a plugin
+near-swarm plugins update my-plugin  # Update a plugin
 
-# Update a plugin
-near-swarm plugins update my-plugin
+# Run Agents
+near-swarm run my-agent             # Run single agent
+near-swarm run price-monitor decision-maker # Run multiple agents
+near-swarm execute my-agent --operation check_balance # Execute operation
+
+# Configuration
+near-swarm config init              # Initialize configuration
+near-swarm config validate          # Validate configuration
+near-swarm config show              # Show current configuration
 ```
-
-### Running Agents
-```bash
-# Run single agent
-near-swarm run my-token-bot
-
-# Run multiple agents together
-near-swarm run price-monitor decision-maker
-
-# Execute specific operation
-near-swarm execute my-token-bot --operation check_balance
-```
-
-### Configuration Management
-```bash
-# Initialize configuration
-near-swarm config init
-
-# Validate configuration
-near-swarm config validate
-
-# Show current configuration
-near-swarm config show
-```
-
-## 🔧 Plugin Installation Guide
-
-Plugins can be installed in several ways:
-
-1. **Local Development**:
-```bash
-# Install from local directory
-near-swarm plugins install ./my-plugin
-
-# Install from specific path
-near-swarm plugins install /path/to/plugin
-```
-
-2. **Git Repository**:
-```bash
-# Install from git repository
-near-swarm plugins install git+https://github.com/username/plugin.git
-
-# Install specific branch/tag
-near-swarm plugins install git+https://github.com/username/plugin.git@branch
-```
-
-3. **Plugin Registry**:
-```bash
-# Install from official registry
-near-swarm plugins install plugin-name
-
-# Install specific version
-near-swarm plugins install plugin-name==1.0.0
-```
-
-## ❗ Troubleshooting
-
-Common issues and solutions:
-
-### Environment Setup
-- **Issue**: `Python version not supported`
-  - Solution: Install Python 3.12+ using pyenv or your system package manager
-  - Verify with: `python --version`
-
-- **Issue**: `Virtual environment activation fails`
-  - Windows Solution: Use `venv\Scripts\activate`
-  - Unix Solution: Use `source venv/bin/activate`
-  - Check activation with: `which python`
-
-### Plugin System
-- **Issue**: `Plugin not found`
-  - Verify plugin path is correct
-  - Check plugin structure matches template
-  - Run: `near-swarm plugins list` to see installed plugins
-
-### NEAR Integration
-- **Issue**: `Invalid NEAR account`
-  - Verify account exists on testnet
-  - Check account has sufficient balance
-  - Validate private key format
-
-### LLM Integration
-- **Issue**: `LLM API key invalid`
-  - Verify API key in .env file
-  - Check LLM_PROVIDER matches API key
-  - Test connection: `near-swarm config validate`
 
 ## 🎓 Learning Paths
 
 Choose your path based on your background:
 
 ### 🤖 For AI/ML Developers
+
 - Focus on agent plugins and LLM integration
 - Skip to the "Customizing Agent Behavior" section
 - See examples of different LLM providers
 
 ### 🌐 For Web3 Developers
+
 - Focus on NEAR blockchain integration
 - Skip to the "NEAR Integration" section
 - Learn about transaction handling and smart contracts
 
 ### 🏗️ For Full-Stack Developers
+
 - Follow the tutorial sequentially
 - Learn both AI and blockchain concepts
 - Build end-to-end applications
@@ -237,6 +146,7 @@ Choose your path based on your background:
 ## 1. Your First Agent Plugin (10 minutes)
 
 Let's create your first NEAR agent plugin! We'll build a simple token transfer agent named "TokenBot" that can:
+
 1. Connect to NEAR testnet
 2. Check its balance
 3. Send NEAR tokens to other accounts
@@ -249,7 +159,8 @@ cd token-bot
 ```
 
 This creates:
-```
+
+```bash
 token-bot/
 ├── __init__.py
 ├── agent.yaml     # Agent configuration
@@ -388,22 +299,26 @@ LLM_MODEL=deepseek-ai/DeepSeek-V3
 ### Step 5: Run Your Agent
 
 1. Install your agent plugin:
+
 ```bash
 near-swarm plugins install ./token-bot
 ```
 
 2. Validate configuration:
+
 ```bash
 near-swarm config validate
 ```
 
 3. Start the agent:
+
 ```bash
 near-swarm dev
 ```
 
 You should see output like:
-```
+
+```bash
 Loading plugin: token-bot
 Initializing TokenBot...
 TokenBot initialized successfully
@@ -428,11 +343,13 @@ near-swarm execute token-bot \
 ### Error Handling
 
 The plugin system provides built-in error handling:
+
 - `AgentError`: For expected operational errors
 - `PluginError`: For plugin lifecycle errors
 - `ConfigError`: For configuration issues
 
 Example error handling in your plugin:
+
 ```python
 from near_swarm.core.exceptions import AgentError
 
@@ -493,6 +410,7 @@ if __name__ == "__main__":
 ```
 
 ### Key Concepts
+
 - Transaction verification
 - Gas management
 - Error handling
@@ -736,21 +654,25 @@ async def handle_transaction(tx):
 Try these examples in your development environment:
 
 1. Simple Trading Strategy
+
 ```bash
 near-swarm run simple-strategy
 ```
 
 2. Arbitrage Strategy
+
 ```bash
 near-swarm run arbitrage-strategy
 ```
 
 3. Swarm Trading
+
 ```bash
 near-swarm run swarm-trading
 ```
 
 4. Token Transfer Strategy
+
 ```bash
 near-swarm run token-transfer
 ```
@@ -763,3 +685,71 @@ near-swarm run token-transfer
 4. Contribute to the framework
 5. Deploy your first agent to mainnet
 
+### Transaction Handling and Error Recovery
+
+When executing transactions through your agent, the framework provides built-in retry logic and error handling:
+
+```python
+# Example transaction execution with automatic retry
+async def execute_transfer(self, recipient: str, amount: float) -> dict:
+    """Execute a token transfer with built-in retry logic."""
+    try:
+        result = await self.near.send_transaction(
+            receiver_id=recipient,
+            amount=amount
+        )
+        return {
+            "status": "success",
+            "transaction_id": result["transaction_id"],
+            "explorer_url": result["explorer_url"]
+        }
+    except Exception as e:
+        self.logger.error(f"Transaction failed: {str(e)}")
+        raise AgentError(f"Transfer failed: {str(e)}")
+```
+
+The framework automatically handles:
+
+- Nonce management and retries
+- Transaction status tracking
+- Error reporting and logging
+- Explorer URL generation
+
+Key transaction behaviors:
+
+- Maximum 3 retry attempts for failed transactions
+- Exponential backoff between retries
+- Automatic nonce handling through near-api-py
+- Clear status reporting and error messages
+
+### Common Transaction Issues
+
+When implementing transaction logic, be aware of these common scenarios:
+
+1. **Nonce Errors**
+   - The framework automatically handles nonce conflicts
+   - Retries with exponential backoff
+   - No manual nonce management needed
+
+2. **Transaction Timing**
+   - Transactions require >75% confidence to execute
+   - Initial runs typically suggest "Hold" positions
+   - Clear logging indicates transaction status
+
+3. **Error Recovery**
+   - Automatic retry for recoverable errors
+   - Clear error messages for debugging
+   - Transaction status available in explorer
+
+Example agent output during transaction:
+
+```bash
+✨ High Confidence Decision:
+• Action: Buy NEAR tokens
+• Confidence: 85%
+
+🔄 Preparing to execute transaction...
+✅ Transaction Successfully Executed!
+• Transaction Hash: HbP7yJMfGfHKWxV5FjHtu2Vk5TZ3eJKPDXvW9YfR1Wk3
+• Explorer URL: https://testnet.nearblocks.io/txns/HbP7yJMfGfHKWxV5FjHtu2Vk5TZ3eJKPDXvW9YfR1Wk3
+```

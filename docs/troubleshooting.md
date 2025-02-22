@@ -247,6 +247,37 @@ async def safe_transfer(self, recipient: str, amount: str) -> Dict[str, Any]:
         return {"error": str(e)}
 ```
 
+### Transaction Issues
+
+#### Nonce Errors
+- **Issue**: `Transaction failed: nonce too low`
+  - **Cause**: Multiple transactions sent in rapid succession
+  - **Solution**: The framework automatically handles retries with exponential backoff
+  - **Verification**: Check transaction status in explorer URL provided in logs
+
+#### Transaction Not Executing
+- **Issue**: Agent analyzes but doesn't execute transactions
+  - **Cause**: Confidence threshold not met (requires >75%)
+  - **Solution**: This is normal behavior. The agent is being conservative
+  - **Verification**: Check confidence level in logs
+
+#### Transaction Status
+- **Issue**: Unclear if transaction was successful
+  - **Solution**: Check the logs for:
+    ```
+    ✅ Transaction Successfully Executed!
+    • Transaction Hash: <hash>
+    • Explorer URL: <url>
+    ```
+  - **Verification**: Visit the explorer URL to confirm status
+
+#### Common Transaction Errors
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `nonce too low` | Transaction ordering issue | Automatic retry handles this |
+| `insufficient funds` | Account balance too low | Add funds to account |
+| `gas price too low` | Network congestion | Automatic retry with backoff |
+
 ## Common Error Messages
 
 ### "Plugin directory not found"
