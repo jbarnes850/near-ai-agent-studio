@@ -192,26 +192,56 @@ class NEARConnection:
     async def send_transaction(self, receiver_id: str, amount: float) -> dict:
         """
         Send a transaction to transfer NEAR tokens using near-api-py.
+        Includes retry logic and enhanced logging for better error handling.
         """
-        try:
-            # Convert NEAR float to yoctoNEAR as an integer
-            amount_yocto = int(amount * 1e24)
+        max_retries = 3
+        base_delay = 1  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                # Convert NEAR float to yoctoNEAR as an integer
+                amount_yocto = int(amount * 1e24)
+                
+                logger.info(f"Attempting transaction (try {attempt + 1}/{max_retries})")
+                logger.info(f"Sending {amount} NEAR to {receiver_id}")
 
-            # Use near-api-py's send_money
-            outcome = self.account.send_money(receiver_id, amount_yocto)
-            tx_hash = outcome.get("transaction_outcome", {}).get("id", None)
-            if not tx_hash:
-                raise NEARRPCError("No transaction hash returned from send_money")
+                # Use near-api-py's send_money with automatic nonce handling
+                outcome = self.account.send_money(receiver_id, amount_yocto)
+                
+                # Extract transaction details
+                tx_hash = outcome.get("transaction_outcome", {}).get("id", None)
+                if not tx_hash:
+                    raise NEARRPCError("No transaction hash returned from send_money")
 
-            explorer_url = f"https://{self.network}.nearblocks.io/txns/{tx_hash}"
-            return {
-                "transaction_id": tx_hash,
-                "explorer_url": explorer_url
-            }
+                explorer_url = f"https://{self.network}.nearblocks.io/txns/{tx_hash}"
+                
+                logger.info(f"Transaction successful! Hash: {tx_hash}")
+                logger.info(f"Explorer URL: {explorer_url}")
+                
+                return {
+                    "status": "success",
+                    "transaction_id": tx_hash,
+                    "explorer_url": explorer_url
+                }
 
-        except Exception as e:
-            logger.error(f"Transaction to {receiver_id} failed: {str(e)}", exc_info=True)
-            raise NEARRPCError(str(e))
+            except Exception as e:
+                error_msg = str(e).lower()
+                
+                # Check if error is nonce-related
+                if "nonce" in error_msg and attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)  # Exponential backoff
+                    logger.warning(f"Nonce error detected, retrying in {delay} seconds...")
+                    await asyncio.sleep(delay)
+                    continue
+                
+                if attempt == max_retries - 1:
+                    logger.error(f"Transaction to {receiver_id} failed after {max_retries} attempts: {str(e)}", exc_info=True)
+                    raise NEARRPCError(f"Transaction failed after {max_retries} attempts: {str(e)}")
+                
+                logger.warning(f"Transaction attempt {attempt + 1} failed: {str(e)}")
+                await asyncio.sleep(base_delay)
+
+        raise NEARRPCError("Transaction failed: Max retries exceeded")
 
     async def close(self):
         """
