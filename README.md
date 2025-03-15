@@ -1,5 +1,7 @@
 # NEAR AI Agent Studio
 
+> Note: This is a community-led, open source template. For official documentation from NEAR AI check out the docs [HERE](https://docs.near.ai/)
+
 A production-ready starter kit for building AI agents and multi-agent swarms on NEAR. This template provides the essential building blocks for creating autonomous agents that can interact with the NEAR blockchain, make decisions using LLMs, and collaborate in swarms. The NEAR AI Agent Studio is an educational and interactive starter kit designed for developers looking to build AI agents and agentic applications on NEAR.
 
 <div align="center">
